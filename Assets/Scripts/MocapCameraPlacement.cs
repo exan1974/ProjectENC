@@ -44,10 +44,8 @@ public class MocapCameraPlacement : MonoBehaviour
     private bool _isAnimationPlaying = false;
     private float _raycastTimer = 0f;
 
-    private void Start()
+    private void Awake()
     {
-        Debug.Log("Start called");
-
         // Get the duration of the animation clip
         if (animationClip != null)
         {
@@ -59,6 +57,11 @@ public class MocapCameraPlacement : MonoBehaviour
             Debug.LogError("Animation clip is not assigned.");
             return;
         }
+    }
+
+    private void Start()
+    {
+        Debug.Log("Start called");
 
         GenerateAllPossibleCameraPositions();
         ResetAccumulatedScores();
@@ -516,5 +519,10 @@ public class MocapCameraPlacement : MonoBehaviour
         {
             return a.distance.CompareTo(b.distance);
         }
+    }
+
+    public float GetAnimDuration()
+    {
+        return _animationDuration;
     }
 }
