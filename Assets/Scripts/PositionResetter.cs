@@ -20,7 +20,7 @@ public class PositionResetter : MonoBehaviour
 
     void Update()
     {
-        CheckIfResetTransform();
+        //CheckIfResetTransform();
         _timeElapsed += Time.deltaTime;
     }
 

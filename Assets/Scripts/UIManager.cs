@@ -15,12 +15,14 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Transform cameraInfoContainer; // Parent container for the instantiated camera info prefabs
 
     [SerializeField] private MocapCameraPlacement mocapCameraPlacement;
+    [SerializeField] private Button calculateButton;
 
     private MocapCameraPlacement.CameraConfiguration bestConfig;
     private MocapCameraPlacement.CameraConfiguration secondBestConfig;
 
     private void Start()
     {
+        calculateButton.onClick.AddListener(OnCalculateButtonClicked);
         // Hide UI on start.
         if (uiPanel != null)
             uiPanel.SetActive(false);
@@ -37,6 +39,16 @@ public class UIManager : MonoBehaviour
         if (secondBestButton != null)
             secondBestButton.onClick.AddListener(() => { SetActiveConfiguration(1); });
     }
+    
+    private void OnCalculateButtonClicked()
+    {
+        if (mocapCameraPlacement != null)
+        {
+            mocapCameraPlacement.CalculateBestPlacement();
+        }
+
+        calculateButton.gameObject.SetActive(false);
+    }
 
     private void OnConfigurationsReady(MocapCameraPlacement.CameraConfiguration best, MocapCameraPlacement.CameraConfiguration second)
     {
@@ -47,6 +59,17 @@ public class UIManager : MonoBehaviour
             uiPanel.SetActive(true);
         // Default to showing the best configuration.
         SetActiveConfiguration(0);
+    }
+
+    public void OpenBestFile()
+    {
+        // This uses Application.dataPath as the base (in Editor, that's your Assets folder)
+        Application.OpenURL("file://" + Application.dataPath + "/CameraLayout_Best.txt");
+    }
+
+    public void OpenSecondFile()
+    {
+        Application.OpenURL("file://" + Application.dataPath + "/CameraLayout_Second.txt");
     }
 
     private void SetActiveConfiguration(int configIndex)

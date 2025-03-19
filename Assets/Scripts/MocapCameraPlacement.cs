@@ -1,58 +1,79 @@
 using System;
-using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
+using UnityEngine.Serialization;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public enum PlacementMode { Circle, Room }
 public enum SurfaceType { Cylinder, Dome }
 
-[ExecuteInEditMode]
+public enum SelectedAnimation {  Acrobatie, Cerceaux, Contorsion, Corde, Roue, Sangle, Tissu, Trampoline }
+
+//[ExecuteInEditMode]
 public class MocapCameraPlacement : MonoBehaviour
 {
     // CAMERA PLACEMENT SETTINGS
-    [Header("Camera Placement Settings")]
-    [SerializeField] private int numberOfCameras = 3;
+    [Header("Camera Placement Settings")] [SerializeField]
+    private int numberOfCameras = 3;
+
     [SerializeField] private float placementRadius = 5f;
     [SerializeField] private float minHeight = 1f;
     [SerializeField] private float maxHeight = 3f;
-    [SerializeField] private float fovAngle = 60f;   // Horizontal FOV
+    [SerializeField] private float fovAngle = 60f; // Horizontal FOV
     [SerializeField] private float maxViewDistance = 10f; // Maximum viewable range
-    private int[] _minCamerasSeenPerTrackingPoint;
+    
+    [Header("Camera FOV Settings")]
+    [SerializeField] private float horizontalFOV = 60f; // Horizontal FOV
+    [SerializeField] private float verticalFOV = 45f;   // Vertical FOV
 
-
-    // TRACKING POINTS (JOINTS FOR RAYCASTS)
-    [Header("Tracking Points (Joints for Raycasts)")]
-    [SerializeField] private List<Transform> trackingPoints = new List<Transform>();
+    // TRACKING POINTS (Joints for Raycasts)
+    [Header("Tracking Points (Joints for Raycasts)")] [SerializeField]
+    private List<Transform> trackingPoints = new List<Transform>();
 
     // RAYCAST SETTINGS
-    [Header("Raycast Settings")]
-    [SerializeField] private LayerMask raycastLayerMask;
+    [Header("Raycast Settings")] [SerializeField]
+    private LayerMask raycastLayerMask;
+
     [SerializeField] private float raycastFPS = 30f;
 
     // GRID SETTINGS
-    [Header("Grid Settings")]
-    [SerializeField] private float gridSpacing = 0.3f;
+    [Header("Grid Settings")] [SerializeField]
+    private float gridSpacing = 0.3f;
 
     // ANIMATION SETTINGS
     [Header("Animation Settings")]
-    [SerializeField] private AnimationClip animationClip;
+    [SerializeField] private SelectedAnimation selectedAnimation;
+
+    [FormerlySerializedAs("animator")] [SerializeField] private Animator charAnimator;
+    
+
     private float _animationDuration;
     private float _elapsedTime;
 
     // PLACEMENT OPTIONS
     [Header("Placement Options")]
     [Tooltip("Full degrees in which cameras may be placed (360° = full circle, 180° = semi circle, etc.)")]
-    [SerializeField] private float maxPlacementAngle = 360f;
-    [Tooltip("Center angle (in world degrees) of the allowed placement arc")]
-    [SerializeField] private float allowedArcCenterAngle = 0f;
-    [Tooltip("Choose whether candidates are placed around the character (Circle) or on a room's surfaces (Room)")]
-    [SerializeField] private PlacementMode placementMode = PlacementMode.Circle;
-    [Tooltip("Choose whether cameras are placed along a cylinder or on a dome (or ceiling in room mode)")]
-    [SerializeField] private SurfaceType surfaceType = SurfaceType.Cylinder;
+    [SerializeField]
+    private float maxPlacementAngle = 360f;
 
-    // ROOM SETTINGS (used if Placement Mode is Room)
-    [Header("Room Settings (only used if Placement Mode is Room)")]
-    [SerializeField] private float roomWidth = 10f;
+    [Tooltip("Center angle (in world degrees) of the allowed placement arc")] [SerializeField]
+    private float allowedArcCenterAngle = 0f;
+
+    [Tooltip("Choose whether candidates are placed around the character (Circle) or on a room's surfaces (Room)")]
+    [SerializeField]
+    private PlacementMode placementMode = PlacementMode.Circle;
+
+    [Tooltip("Choose whether cameras are placed along a cylinder or on a dome (or ceiling in room mode)")]
+    [SerializeField]
+    private SurfaceType surfaceType = SurfaceType.Cylinder;
+
+    // ROOM SETTINGS (if Placement Mode is Room)
+    [Header("Room Settings (only used if Placement Mode is Room)")] [SerializeField]
+    private float roomWidth = 10f;
+
     [SerializeField] private float roomDepth = 10f;
     [SerializeField] private float roomHeight = 3f;
 
@@ -60,44 +81,50 @@ public class MocapCameraPlacement : MonoBehaviour
     private List<Vector3> _allPossiblePositions = new List<Vector3>();
     private List<Quaternion> _allPossibleRotations = new List<Quaternion>();
     private List<float> _accumulatedScores = new List<float>();
-
-    // Hit/miss counters (one entry per candidate)
     private List<int> _accumulatedHits = new List<int>();
     private List<int> _accumulatedMisses = new List<int>();
 
     // TEMPORARY & DEFINITIVE CAMERA CANDIDATES
     private List<Vector3> _selectedCameraPositions = new List<Vector3>();
     private List<Quaternion> _selectedCameraRotations = new List<Quaternion>();
-
     private List<Vector3> _tempCameraPositions = new List<Vector3>();
     private List<Quaternion> _tempCameraRotations = new List<Quaternion>();
 
     private bool _isAnimationPlaying = false;
     private float _raycastTimer = 0f;
 
-    // DATA STRUCTURE FOR A FULL CONFIGURATION (also storing per‑camera stats)
-    public class CameraConfiguration {
+    // Minimum cameras seen per tracking point (across frames)
+    private int[] _minCamerasSeenPerTrackingPoint;
+
+    // PUBLIC CONFIGURATION CLASS
+    [Serializable]
+    public class CameraConfiguration
+    {
         public List<Vector3> positions;
         public List<Quaternion> rotations;
-        public List<int> perCameraHits;    // New: per-camera hit counts
-        public List<int> perCameraMisses;  // New: per-camera miss counts
+        public List<int> perCameraHits;
+        public List<int> perCameraMisses;
         public int totalHits;
         public int totalMisses;
         public float totalScore;
     }
-    private CameraConfiguration _bestConfiguration;
-    private CameraConfiguration _secondBestConfiguration;
-    private List<int> _bestIndices = new List<int>(); // store candidate indices used in best configuration
 
-    // The active configuration that will be drawn (0 = best, 1 = second best)
+    public CameraConfiguration _bestConfiguration;
+    public CameraConfiguration _secondBestConfiguration;
+    private List<int> _bestIndices = new List<int>();
+
     private CameraConfiguration _activeConfiguration;
 
-    // Event to notify UIManager when configurations are ready
+    // PUBLIC EVENT
     public delegate void ConfigurationsReadyHandler(CameraConfiguration best, CameraConfiguration second);
+
     public event ConfigurationsReadyHandler OnConfigurationsReady;
+
+    private CameraCoverageCalculator _calculator;
 
     private void Awake()
     {
+        /*
         if (animationClip != null)
         {
             _animationDuration = animationClip.length / 5f;
@@ -107,7 +134,9 @@ public class MocapCameraPlacement : MonoBehaviour
         {
             Debug.LogError("Animation clip is not assigned.");
             return;
-        }
+        }*/
+
+        _calculator = new CameraCoverageCalculator(raycastLayerMask, fovAngle, maxViewDistance);
     }
 
     private void Start()
@@ -115,6 +144,7 @@ public class MocapCameraPlacement : MonoBehaviour
         Debug.Log("Start called");
         GenerateAllPossibleCameraPositions();
         ResetAccumulatedData();
+        SetAnimation();
         _isAnimationPlaying = true;
     }
 
@@ -132,8 +162,8 @@ public class MocapCameraPlacement : MonoBehaviour
             }
 
             CalculateScoresForCurrentFrame();
-            
-            // For each tracking point, count how many temporary cameras see it and update the minimum.
+
+            // Update minimum cameras seen per tracking point.
             if (_tempCameraPositions.Count > 0)
             {
                 for (int t = 0; t < trackingPoints.Count; t++)
@@ -142,36 +172,45 @@ public class MocapCameraPlacement : MonoBehaviour
                     int seenCount = 0;
                     for (int i = 0; i < _tempCameraPositions.Count; i++)
                     {
-                        if (IsPointInFOV(_tempCameraPositions[i], _tempCameraRotations[i], trackingPoints[t].position) &&
-                            IsJointVisible(_tempCameraPositions[i], trackingPoints[t].position, trackingPoints[t]))
+                        if (_calculator.IsPointInFOV(_tempCameraPositions[i], _tempCameraRotations[i],
+                                trackingPoints[t].position) &&
+                            _calculator.IsJointVisible(_tempCameraPositions[i], trackingPoints[t].position,
+                                trackingPoints[t]))
                         {
                             seenCount++;
                         }
                     }
+
                     _minCamerasSeenPerTrackingPoint[t] = Mathf.Min(_minCamerasSeenPerTrackingPoint[t], seenCount);
                 }
             }
 
-
-            if (_elapsedTime >= _animationDuration)
-            {
-                OnAnimationLoop();
-                _elapsedTime = 0f;
-                _isAnimationPlaying = false;
-            }
+            /* if (_elapsedTime >= _animationDuration)
+             {
+                 OnAnimationLoop();
+                 _elapsedTime = 0f;
+                 _isAnimationPlaying = false;
+             }*/
         }
     }
 
-    // --- New Global Optimization Method ---
-    // This method selects cameras using a greedy algorithm that maximizes:
-    // - Base coverage score (how well the candidate sees tracking points)
-    // - A bonus for covering tracking points not already covered (unique coverage)
-    // - Minus a penalty if the candidate is too close to already selected cameras.
+    private void SetAnimation()
+    {
+        if (charAnimator != null)
+        {
+            charAnimator.SetInteger("AnimIndex", (int)selectedAnimation);
+        }
+        else
+        {
+            Debug.LogError("Animator component is not attached.");
+        }
+    }
+
+    // Global optimization method (zone-based candidate selection)
     private List<int> SelectGlobalConfigurationIndices()
     {
         List<int> selectedIndices = new List<int>();
         List<int> candidateIndices = Enumerable.Range(0, _allPossiblePositions.Count).ToList();
-        // Track which tracking points are already covered.
         bool[] covered = new bool[trackingPoints.Count];
 
         while (selectedIndices.Count < numberOfCameras && candidateIndices.Count > 0)
@@ -181,27 +220,26 @@ public class MocapCameraPlacement : MonoBehaviour
 
             foreach (int idx in candidateIndices)
             {
-                // Base coverage: use the candidate's own coverage score.
-                float baseCoverage = CalculateCoverageScore(
+                float baseCoverage = _calculator.CalculateCoverageScore(
                     new List<Vector3> { _allPossiblePositions[idx] },
-                    new List<Quaternion> { _allPossibleRotations[idx] }
+                    new List<Quaternion> { _allPossibleRotations[idx] },
+                    trackingPoints
                 );
 
-                // Unique coverage bonus: count tracking points not yet covered that this candidate sees.
                 int uniqueCoverage = 0;
                 for (int t = 0; t < trackingPoints.Count; t++)
                 {
-                    if (trackingPoints[t] == null)
-                        continue;
+                    if (trackingPoints[t] == null) continue;
                     if (!covered[t] &&
-                        IsPointInFOV(_allPossiblePositions[idx], _allPossibleRotations[idx], trackingPoints[t].position) &&
-                        IsJointVisible(_allPossiblePositions[idx], trackingPoints[t].position, trackingPoints[t]))
+                        _calculator.IsPointInFOV(_allPossiblePositions[idx], _allPossibleRotations[idx],
+                            trackingPoints[t].position) &&
+                        _calculator.IsJointVisible(_allPossiblePositions[idx], trackingPoints[t].position,
+                            trackingPoints[t]))
                     {
                         uniqueCoverage++;
                     }
                 }
 
-                // Overlap penalty: if candidate is too close to any already selected camera.
                 float overlapPenalty = 0f;
                 foreach (int sel in selectedIndices)
                 {
@@ -210,7 +248,6 @@ public class MocapCameraPlacement : MonoBehaviour
                         overlapPenalty += 1f;
                 }
 
-                // Combine objectives (weights are tunable)
                 float candidateScore = baseCoverage + 2f * uniqueCoverage - 10f * overlapPenalty;
 
                 if (candidateScore > bestScore)
@@ -226,23 +263,23 @@ public class MocapCameraPlacement : MonoBehaviour
             selectedIndices.Add(bestCandidate);
             candidateIndices.Remove(bestCandidate);
 
-            // Mark tracking points covered by bestCandidate.
             for (int t = 0; t < trackingPoints.Count; t++)
             {
-                if (trackingPoints[t] == null)
-                    continue;
-                if (IsPointInFOV(_allPossiblePositions[bestCandidate], _allPossibleRotations[bestCandidate], trackingPoints[t].position) &&
-                    IsJointVisible(_allPossiblePositions[bestCandidate], trackingPoints[t].position, trackingPoints[t]))
+                if (trackingPoints[t] == null) continue;
+                if (_calculator.IsPointInFOV(_allPossiblePositions[bestCandidate], _allPossibleRotations[bestCandidate],
+                        trackingPoints[t].position) &&
+                    _calculator.IsJointVisible(_allPossiblePositions[bestCandidate], trackingPoints[t].position,
+                        trackingPoints[t]))
                 {
                     covered[t] = true;
                 }
             }
         }
+
         return selectedIndices;
     }
-    // --- End Global Optimization Method ---
 
-    // This method is unchanged—it still updates temporary camera positions during animation.
+    // Zone-based candidate selection for temporary cameras.
     private void SelectTemporaryCameras()
     {
         _tempCameraPositions.Clear();
@@ -268,12 +305,13 @@ public class MocapCameraPlacement : MonoBehaviour
                 if (candidateAngle < 0) candidateAngle += 360f;
                 if (candidateAngle < zoneStartAngle || candidateAngle >= zoneEndAngle)
                     continue;
-                bool tooClose = selectedPositions.Any(selectedPos =>
-                    Vector3.Distance(selectedPos, _allPossiblePositions[i]) < placementRadius / (numberOfCameras * 2f));
+                bool tooClose = selectedPositions.Any(sp =>
+                    Vector3.Distance(sp, _allPossiblePositions[i]) < placementRadius / (numberOfCameras * 2f));
                 if (tooClose)
                     continue;
 
-                float candidateScore = CalculateCandidateScore(i, trackingCoverage, zoneCenter, halfZoneAngle);
+                float candidateScore = _calculator.CalculateCandidateScore(i, _allPossiblePositions,
+                    _allPossibleRotations, trackingPoints, trackingCoverage, zoneCenter, halfZoneAngle);
                 if (candidateScore > bestCandidateScore)
                 {
                     bestCandidateScore = candidateScore;
@@ -298,8 +336,10 @@ public class MocapCameraPlacement : MonoBehaviour
                 for (int t = 0; t < trackingPoints.Count; t++)
                 {
                     if (trackingPoints[t] == null) continue;
-                    if (IsPointInFOV(_allPossiblePositions[bestCandidateIndex], _allPossibleRotations[bestCandidateIndex], trackingPoints[t].position) &&
-                        IsJointVisible(_allPossiblePositions[bestCandidateIndex], trackingPoints[t].position, trackingPoints[t]))
+                    if (_calculator.IsPointInFOV(_allPossiblePositions[bestCandidateIndex],
+                            _allPossibleRotations[bestCandidateIndex], trackingPoints[t].position) &&
+                        _calculator.IsJointVisible(_allPossiblePositions[bestCandidateIndex],
+                            trackingPoints[t].position, trackingPoints[t]))
                     {
                         trackingCoverage[t]++;
                     }
@@ -444,7 +484,6 @@ public class MocapCameraPlacement : MonoBehaviour
             }
             else if (surfaceType == SurfaceType.Dome)
             {
-                // Place candidates on the ceiling.
                 int ceilingStepsX = Mathf.FloorToInt(roomWidth / gridSpacing);
                 int ceilingStepsZ = Mathf.FloorToInt(roomDepth / gridSpacing);
                 for (int i = 0; i <= ceilingStepsX; i++)
@@ -457,7 +496,6 @@ public class MocapCameraPlacement : MonoBehaviour
                         float z = Mathf.Lerp(-roomDepth / 2, roomDepth / 2, tZ);
                         Vector3 pos = transform.position + new Vector3(x, roomHeight, z);
                         if (!IsWithinAllowedArc(pos)) continue;
-                        // Look down for ceiling candidates.
                         Quaternion rot = Quaternion.LookRotation(transform.position - pos, Vector3.down);
                         _allPossiblePositions.Add(pos);
                         _allPossibleRotations.Add(rot);
@@ -490,7 +528,6 @@ public class MocapCameraPlacement : MonoBehaviour
         _accumulatedHits = Enumerable.Repeat(0, count).ToList();
         _accumulatedMisses = Enumerable.Repeat(0, count).ToList();
 
-        // Initialize the minimum cameras seen per tracking point to a high value.
         _minCamerasSeenPerTrackingPoint = new int[trackingPoints.Count];
         for (int i = 0; i < trackingPoints.Count; i++)
         {
@@ -498,19 +535,16 @@ public class MocapCameraPlacement : MonoBehaviour
         }
     }
 
-
     private void CalculateScoresForCurrentFrame()
     {
         for (int i = 0; i < _allPossiblePositions.Count; i++)
         {
-            // Get a score for candidate i
             float score = CalculateCoverageScore(
                 new List<Vector3> { _allPossiblePositions[i] },
                 new List<Quaternion> { _allPossibleRotations[i] }
             );
             _accumulatedScores[i] += score;
 
-            // For each tracking joint, count a hit if visible, otherwise a miss.
             foreach (var joint in trackingPoints)
             {
                 if (joint == null) continue;
@@ -529,9 +563,10 @@ public class MocapCameraPlacement : MonoBehaviour
 
     private void OnAnimationLoop()
     {
-        Debug.Log("Animation looped. Selecting definitive best cameras using global optimization...");
-        // Use the new global optimization method.
-        _bestIndices = SelectGlobalConfigurationIndices();
+        Debug.Log("Animation looped. Selecting definitive best cameras using zone-based arcs...");
+
+        // 1) Select best configuration using zone-based arcs.
+        _bestIndices = SelectConfigurationIndices(false, null);
         _selectedCameraPositions.Clear();
         _selectedCameraRotations.Clear();
         foreach (int idx in _bestIndices)
@@ -539,26 +574,21 @@ public class MocapCameraPlacement : MonoBehaviour
             _selectedCameraPositions.Add(_allPossiblePositions[idx]);
             _selectedCameraRotations.Add(_allPossibleRotations[idx]);
         }
+
         _bestConfiguration = CreateConfigurationFromIndices(_bestIndices);
 
-        // For a second-best configuration, simply choose top remaining candidates by accumulated score.
-        List<int> remainingCandidates = Enumerable.Range(0, _allPossiblePositions.Count)
-            .Where(i => !_bestIndices.Contains(i)).ToList();
-        List<int> secondIndices = new List<int>();
-        while (secondIndices.Count < numberOfCameras && remainingCandidates.Count > 0)
-        {
-            int best = remainingCandidates.OrderByDescending(i => _accumulatedScores[i]).First();
-            secondIndices.Add(best);
-            remainingCandidates.Remove(best);
-        }
+        // 2) Select second-best configuration by skipping the exact candidates used for best
+        List<int> secondIndices = SelectConfigurationIndices(true, _bestIndices);
         _secondBestConfiguration = CreateConfigurationFromIndices(secondIndices);
 
-        // Default the active configuration to the best one.
+        // Default the active configuration to the best one
         _activeConfiguration = _bestConfiguration;
         Debug.Log($"Definitively selected {_selectedCameraPositions.Count} best cameras.");
+
+        // Notify any listeners (e.g. UIManager) that configurations are ready
         OnConfigurationsReady?.Invoke(_bestConfiguration, _secondBestConfiguration);
-        
-        // Log the minimum number of cameras that saw each tracking point.
+
+        // Log the minimum coverage stats
         for (int t = 0; t < trackingPoints.Count; t++)
         {
             if (trackingPoints[t] != null)
@@ -567,6 +597,8 @@ public class MocapCameraPlacement : MonoBehaviour
             }
         }
 
+        // Optional: if you have an external exporter, you can call it here:
+        // CameraLayoutExporter.Export("CameraLayout.txt", _bestConfiguration.positions, transform.position);
     }
 
     private CameraConfiguration CreateConfigurationFromIndices(List<int> indices)
@@ -574,12 +606,11 @@ public class MocapCameraPlacement : MonoBehaviour
         CameraConfiguration config = new CameraConfiguration();
         config.positions = new List<Vector3>();
         config.rotations = new List<Quaternion>();
-        config.perCameraHits = new List<int>();    // Store individual hit counts per camera.
-        config.perCameraMisses = new List<int>();  // Store individual miss counts per camera.
+        config.perCameraHits = new List<int>();
+        config.perCameraMisses = new List<int>();
         config.totalHits = 0;
         config.totalMisses = 0;
         config.totalScore = 0f;
-
         foreach (int index in indices)
         {
             config.positions.Add(_allPossiblePositions[index]);
@@ -592,11 +623,12 @@ public class MocapCameraPlacement : MonoBehaviour
             config.totalMisses += misses;
             config.totalScore += _accumulatedScores[index];
         }
+
         return config;
     }
 
-    // Zone‐based candidate scoring remains for temporary selection.
-    private float CalculateCandidateScore(int cameraIndex, int[] trackingCoverage, float zoneCenter, float zoneHalfAngle)
+    private float CalculateCandidateScore(int cameraIndex, int[] trackingCoverage, float zoneCenter,
+        float zoneHalfAngle)
     {
         float coverageScore = 0f;
         for (int i = 0; i < trackingPoints.Count; i++)
@@ -644,6 +676,7 @@ public class MocapCameraPlacement : MonoBehaviour
                 }
             }
         }
+
         return (float)visibleJoints / trackingPoints.Count;
     }
 
@@ -656,6 +689,7 @@ public class MocapCameraPlacement : MonoBehaviour
         {
             return hit.transform == joint;
         }
+
         return true;
     }
 
@@ -672,7 +706,6 @@ public class MocapCameraPlacement : MonoBehaviour
         return true;
     }
 
-    // Helper method: draws an edge with segments colored based on whether the midpoint is in the allowed arc.
     private void DrawSegmentedEdge(Vector3 a, Vector3 b, int segments = 50)
     {
         for (int i = 0; i < segments; i++)
@@ -698,7 +731,7 @@ public class MocapCameraPlacement : MonoBehaviour
             DrawRoomOutline();
         }
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         if (_isAnimationPlaying)
         {
             for (int i = 0; i < _tempCameraPositions.Count; i++)
@@ -708,8 +741,7 @@ public class MocapCameraPlacement : MonoBehaviour
                 Gizmos.color = Color.yellow;
                 Gizmos.DrawSphere(camPos, 0.2f);
                 DrawCameraFOVPyramid(camPos, camRot);
-                // Label with camera number (only the number during animation)
-                UnityEditor.Handles.Label(camPos + Vector3.up * 0.3f, (i + 1).ToString());
+                Handles.Label(camPos + Vector3.up * 0.3f, (i + 1).ToString());
                 foreach (var joint in trackingPoints)
                 {
                     if (joint == null) continue;
@@ -735,14 +767,14 @@ public class MocapCameraPlacement : MonoBehaviour
                 Gizmos.color = Color.blue;
                 Gizmos.DrawSphere(camPos, 0.2f);
                 DrawCameraFOVPyramid(camPos, camRot);
-                // Compute per-camera hit/miss percentages.
                 int hits = _activeConfiguration.perCameraHits[i];
                 int misses = _activeConfiguration.perCameraMisses[i];
                 int total = hits + misses;
                 float hitPercent = total > 0 ? (float)hits / total * 100f : 0f;
                 float missPercent = total > 0 ? (float)misses / total * 100f : 0f;
-                string label = (i + 1).ToString() + " (H:" + hitPercent.ToString("F0") + "%, M:" + missPercent.ToString("F0") + "%)";
-                UnityEditor.Handles.Label(camPos + Vector3.up * 0.3f, label);
+                string label = (i + 1).ToString() + " (H:" + hitPercent.ToString("F0") + "%, M:" +
+                               missPercent.ToString("F0") + "%)";
+                Handles.Label(camPos + Vector3.up * 0.3f, label);
                 foreach (var joint in trackingPoints)
                 {
                     if (joint == null) continue;
@@ -759,7 +791,7 @@ public class MocapCameraPlacement : MonoBehaviour
                 }
             }
         }
-        #endif
+#endif
     }
 
     private void DrawCameraFOVPyramid(Vector3 position, Quaternion rotation)
@@ -791,17 +823,26 @@ public class MocapCameraPlacement : MonoBehaviour
         int segments = 50;
         float startAngle = allowedArcCenterAngle - maxPlacementAngle / 2f;
         float endAngle = allowedArcCenterAngle + maxPlacementAngle / 2f;
-        Vector3 prevPoint = transform.position + new Vector3(Mathf.Cos(startAngle * Mathf.Deg2Rad), 0, Mathf.Sin(startAngle * Mathf.Deg2Rad)) * placementRadius;
+        Vector3 prevPoint = transform.position +
+                            new Vector3(Mathf.Cos(startAngle * Mathf.Deg2Rad), 0,
+                                Mathf.Sin(startAngle * Mathf.Deg2Rad)) * placementRadius;
         for (int i = 1; i <= segments; i++)
         {
             float t = (float)i / segments;
             float angle = Mathf.Lerp(startAngle, endAngle, t);
-            Vector3 newPoint = transform.position + new Vector3(Mathf.Cos(angle * Mathf.Deg2Rad), 0, Mathf.Sin(angle * Mathf.Deg2Rad)) * placementRadius;
+            Vector3 newPoint = transform.position +
+                               new Vector3(Mathf.Cos(angle * Mathf.Deg2Rad), 0, Mathf.Sin(angle * Mathf.Deg2Rad)) *
+                               placementRadius;
             Gizmos.DrawLine(prevPoint, newPoint);
             prevPoint = newPoint;
         }
-        Vector3 arcStart = transform.position + new Vector3(Mathf.Cos(startAngle * Mathf.Deg2Rad), 0, Mathf.Sin(startAngle * Mathf.Deg2Rad)) * placementRadius;
-        Vector3 arcEnd = transform.position + new Vector3(Mathf.Cos(endAngle * Mathf.Deg2Rad), 0, Mathf.Sin(endAngle * Mathf.Deg2Rad)) * placementRadius;
+
+        Vector3 arcStart = transform.position +
+                           new Vector3(Mathf.Cos(startAngle * Mathf.Deg2Rad), 0,
+                               Mathf.Sin(startAngle * Mathf.Deg2Rad)) * placementRadius;
+        Vector3 arcEnd = transform.position +
+                         new Vector3(Mathf.Cos(endAngle * Mathf.Deg2Rad), 0, Mathf.Sin(endAngle * Mathf.Deg2Rad)) *
+                         placementRadius;
         Gizmos.DrawLine(transform.position, arcStart);
         Gizmos.DrawLine(transform.position, arcEnd);
     }
@@ -834,7 +875,7 @@ public class MocapCameraPlacement : MonoBehaviour
         }
     }
 
-    private class RaycastHitComparer : IComparer<RaycastHit>
+    private class RaycastHitComparer : System.Collections.Generic.IComparer<RaycastHit>
     {
         public int Compare(RaycastHit a, RaycastHit b)
         {
@@ -859,4 +900,197 @@ public class MocapCameraPlacement : MonoBehaviour
             _activeConfiguration = _secondBestConfiguration;
         }
     }
+
+    private List<int> SelectConfigurationIndices(bool secondBest, List<int> bestIndices)
+    {
+        // This method picks cameras in arcs, dividing 360 degrees into zones.
+        // If secondBest == true, we skip the exact candidate used in bestIndices for each zone (if possible).
+
+        List<int> selectedIndices = new List<int>();
+        int[] trackingCoverage = new int[trackingPoints.Count];
+        List<Vector3> selectedPositions = new List<Vector3>();
+        float angleStep = 360f / numberOfCameras;
+        float halfZoneAngle = angleStep / 2f;
+
+        for (int zone = 0; zone < Mathf.Min(numberOfCameras, _allPossiblePositions.Count); zone++)
+        {
+            int bestCandidateIndex = -1;
+            float bestCandidateScore = -Mathf.Infinity;
+            float zoneStartAngle = zone * angleStep;
+            float zoneEndAngle = (zone + 1) * angleStep;
+            float zoneCenter = zoneStartAngle + halfZoneAngle;
+
+            for (int i = 0; i < _allPossiblePositions.Count; i++)
+            {
+                // If secondBest, skip if it's the same candidate used by bestIndices in the same zone
+                if (secondBest && bestIndices != null && zone < bestIndices.Count && i == bestIndices[zone])
+                    continue;
+
+                Vector3 posRelative = _allPossiblePositions[i] - transform.position;
+                float candidateAngle = Mathf.Atan2(posRelative.z, posRelative.x) * Mathf.Rad2Deg;
+                if (candidateAngle < 0) candidateAngle += 360f;
+                if (candidateAngle < zoneStartAngle || candidateAngle >= zoneEndAngle)
+                    continue;
+
+                // Skip if it's too close to an already chosen camera
+                bool tooClose = selectedPositions.Any(sp =>
+                    Vector3.Distance(sp, _allPossiblePositions[i]) < placementRadius / (numberOfCameras * 2f));
+                if (tooClose) continue;
+
+                // Score the candidate. The method below is the same you use for "temporary" scoring:
+                float candidateScore = CalculateCandidateScore(i, trackingCoverage, zoneCenter, halfZoneAngle);
+                if (candidateScore > bestCandidateScore)
+                {
+                    bestCandidateScore = candidateScore;
+                    bestCandidateIndex = i;
+                }
+            }
+
+            if (bestCandidateIndex == -1)
+            {
+                // Fallback if no suitable candidate in this zone
+                bestCandidateIndex = _accumulatedScores
+                    .Select((score, index) => new { Score = score, Index = index })
+                    .OrderByDescending(x => x.Score)
+                    .FirstOrDefault()?.Index ?? 0;
+            }
+
+            selectedIndices.Add(bestCandidateIndex);
+            selectedPositions.Add(_allPossiblePositions[bestCandidateIndex]);
+
+            // Increase coverage for each tracking point this camera can see
+            for (int t = 0; t < trackingPoints.Count; t++)
+            {
+                if (trackingPoints[t] == null) continue;
+                if (IsPointInFOV(_allPossiblePositions[bestCandidateIndex], _allPossibleRotations[bestCandidateIndex],
+                        trackingPoints[t].position) &&
+                    IsJointVisible(_allPossiblePositions[bestCandidateIndex], trackingPoints[t].position,
+                        trackingPoints[t]))
+                {
+                    trackingCoverage[t]++;
+                }
+            }
+        }
+
+        return selectedIndices;
+    }
+    
+    public void CalculateBestPlacement()
+{
+    // Ensure that candidate positions have been generated.
+    if (_allPossiblePositions == null || _allPossiblePositions.Count == 0)
+    {
+        Debug.LogWarning("No camera positions available. Please check that GenerateAllPossibleCameraPositions() ran and that trackingPoints are assigned.");
+        return;
+    }
+
+    Debug.Log("Calculating definitive best camera placement using zone-based selection...");
+
+    // Stop the ongoing optimization process
+    _isAnimationPlaying = false;
+
+    // 1) Select best configuration using zone-based selection.
+    _bestIndices = SelectConfigurationIndices(false, null);
+    _selectedCameraPositions.Clear();
+    _selectedCameraRotations.Clear();
+    foreach (int idx in _bestIndices)
+    {
+        _selectedCameraPositions.Add(_allPossiblePositions[idx]);
+        _selectedCameraRotations.Add(_allPossibleRotations[idx]);
+    }
+    _bestConfiguration = CreateConfigurationFromIndices(_bestIndices);
+
+    // 2) Select second-best configuration by picking candidates from remaining indices.
+    List<int> remainingCandidates = Enumerable.Range(0, _allPossiblePositions.Count)
+        .Where(i => !_bestIndices.Contains(i)).ToList();
+    List<int> secondIndices = new List<int>();
+    while (secondIndices.Count < numberOfCameras && remainingCandidates.Count > 0)
+    {
+        int best = remainingCandidates.OrderByDescending(i => _accumulatedScores[i]).First();
+        secondIndices.Add(best);
+        remainingCandidates.Remove(best);
+    }
+    _secondBestConfiguration = CreateConfigurationFromIndices(secondIndices);
+
+    // Default the active configuration to the best configuration.
+    _activeConfiguration = _bestConfiguration;
+    Debug.Log($"Definitively selected {_selectedCameraPositions.Count} best cameras.");
+
+    // Fire event so that UIManager (or other listeners) can update.
+    OnConfigurationsReady?.Invoke(_bestConfiguration, _secondBestConfiguration);
+
+    // Log minimum coverage stats.
+    for (int t = 0; t < trackingPoints.Count; t++)
+    {
+        if (trackingPoints[t] != null)
+        {
+            Debug.Log("Tracking point " + t + " - minimum cameras seen: " + _minCamerasSeenPerTrackingPoint[t]);
+        }
+    }
+
+    // Export both configurations to separate files.
+    CameraLayoutExporter.Export("CameraLayout_Best.txt", _bestConfiguration.positions, transform.position);
+    CameraLayoutExporter.Export("CameraLayout_Second.txt", _secondBestConfiguration.positions, transform.position);
+
+    // Clear temporary cameras (yellow) and only show selected cameras (blue)
+    _tempCameraPositions.Clear();
+    _tempCameraRotations.Clear();
+}
+    
+    /*
+public void CalculateBestPlacement()
+{
+    // Ensure that candidate positions have been generated.
+    if (_allPossiblePositions == null || _allPossiblePositions.Count == 0)
+    {
+        Debug.LogWarning("No camera positions available. Please check that GenerateAllPossibleCameraPositions() ran and that trackingPoints are assigned.");
+        return;
+    }
+
+    Debug.Log("Calculating definitive best camera placement using zone-based selection...");
+
+    // 1) Select best configuration using zone-based selection.
+    _bestIndices = SelectConfigurationIndices(false, null);
+    _selectedCameraPositions.Clear();
+    _selectedCameraRotations.Clear();
+    foreach (int idx in _bestIndices)
+    {
+        _selectedCameraPositions.Add(_allPossiblePositions[idx]);
+        _selectedCameraRotations.Add(_allPossibleRotations[idx]);
+    }
+    _bestConfiguration = CreateConfigurationFromIndices(_bestIndices);
+
+    // 2) Select second-best configuration by picking candidates from remaining indices.
+    List<int> remainingCandidates = Enumerable.Range(0, _allPossiblePositions.Count)
+        .Where(i => !_bestIndices.Contains(i)).ToList();
+    List<int> secondIndices = new List<int>();
+    while (secondIndices.Count < numberOfCameras && remainingCandidates.Count > 0)
+    {
+        int best = remainingCandidates.OrderByDescending(i => _accumulatedScores[i]).First();
+        secondIndices.Add(best);
+        remainingCandidates.Remove(best);
+    }
+    _secondBestConfiguration = CreateConfigurationFromIndices(secondIndices);
+
+    // Default the active configuration to the best configuration.
+    _activeConfiguration = _bestConfiguration;
+    Debug.Log($"Definitively selected {_selectedCameraPositions.Count} best cameras.");
+
+    // Fire event so that UIManager (or other listeners) can update.
+    OnConfigurationsReady?.Invoke(_bestConfiguration, _secondBestConfiguration);
+
+    // Log minimum coverage stats.
+    for (int t = 0; t < trackingPoints.Count; t++)
+    {
+        if (trackingPoints[t] != null)
+        {
+            Debug.Log("Tracking point " + t + " - minimum cameras seen: " + _minCamerasSeenPerTrackingPoint[t]);
+        }
+    }
+
+    // Export both configurations to separate files.
+    CameraLayoutExporter.Export("CameraLayout_Best.txt", _bestConfiguration.positions, transform.position);
+    CameraLayoutExporter.Export("CameraLayout_Second.txt", _secondBestConfiguration.positions, transform.position);
+}*/
+
 }
