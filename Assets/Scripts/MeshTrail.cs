@@ -3,33 +3,57 @@ using System.Collections;
 
 public class MeshTrail : MonoBehaviour
 {
-    [SerializeField] private float activeTime = 2f;
+    [Header("Trail Timing")]
+    [Tooltip("How long (in seconds) the trail remains active once triggered.")]
+    [SerializeField] private float activeTime = 100f;
 
     [Header("Mesh Related")]
+    [Tooltip("How frequently (in seconds) the skinned mesh is baked and instantiated.")]
     [SerializeField] private float meshRefreshRate = 0.1f;
+
+    [Tooltip("How long after creation each baked mesh instance is destroyed (in seconds).")]
     [SerializeField] private float meshDestroyDelay = 3f;
+
+    [Tooltip("The transform whose position and rotation are used to spawn the baked mesh.")]
     [SerializeField] private Transform positionToSpawn;
 
-    [Header("Shader Related")]
-    [SerializeField] private Material mat;
-    [SerializeField] private string shaderVarRef;
+    [Header("Trail Materials")]
+    [Tooltip("Material for the glowing fresnel trail. (Press 1 to trigger this trail.)")]
+    [SerializeField] private Material fresnelMaterial;
+
+    [Tooltip("Material for the replica trail (matches the character’s look). (Press 2 to trigger this trail.)")]
+    [SerializeField] private Material replicaMaterial;
+
+    [Header("Shader Animation Settings")]
+    [Tooltip("The reference name of the float property in the shader to animate (e.g., '_Alpha').")]
+    [SerializeField] private string shaderVarRef = "_Alpha";
+
+    [Tooltip("How much the shader float property decreases per step (used for fading out the trail).")]
     [SerializeField] private float shaderVarRate = 0.1f;
+
+    [Tooltip("How often (in seconds) the shader float property is updated.")]
     [SerializeField] private float shaderVarRefreshRate = 0.05f;
 
     private bool isTrailActive;
     private SkinnedMeshRenderer[] skinnedMeshRenderers;
 
-    // Update is called once per frame
     void Update()
     {
-        if(Input.GetKeyDown (KeyCode.Space) && !isTrailActive)
+        // Trigger the glowing fresnel trail by pressing "1"
+        if (Input.GetKeyDown(KeyCode.Alpha1) && !isTrailActive)
         {
             isTrailActive = true;
-            StartCoroutine(ActivateTrail(activeTime));
+            StartCoroutine(ActivateTrail(activeTime, fresnelMaterial));
+        }
+        // Trigger the replica trail by pressing "2"
+        else if (Input.GetKeyDown(KeyCode.Alpha2) && !isTrailActive)
+        {
+            isTrailActive = true;
+            StartCoroutine(ActivateTrail(activeTime, replicaMaterial));
         }
     }
 
-    IEnumerator ActivateTrail(float timeActive)
+    IEnumerator ActivateTrail(float timeActive, Material usedMaterial)
     {
         while (timeActive > 0)
         {
@@ -40,22 +64,32 @@ public class MeshTrail : MonoBehaviour
                 skinnedMeshRenderers = GetComponentsInChildren<SkinnedMeshRenderer>();
             }
 
-            for (int i=0; i<skinnedMeshRenderers.Length; i++)
+            for (int i = 0; i < skinnedMeshRenderers.Length; i++)
             {
-                GameObject gO = new GameObject();
+                // Create a new GameObject to hold the baked mesh trail segment
+                GameObject gO = new GameObject("MeshTrailSegment");
                 gO.transform.SetPositionAndRotation(positionToSpawn.position, positionToSpawn.rotation);
 
+                // Add required mesh components
                 MeshRenderer mR = gO.AddComponent<MeshRenderer>();
                 MeshFilter mF = gO.AddComponent<MeshFilter>();
 
+                // Bake the skinned mesh into a static mesh
                 Mesh mesh = new Mesh();
                 skinnedMeshRenderers[i].BakeMesh(mesh);
 
+                // Assign the baked mesh and the chosen material
                 mF.mesh = mesh;
-                mR.material = mat;
+                mR.material = usedMaterial;
 
-                StartCoroutine(AnimateMaterialFloat(mR.material, 0, shaderVarRate, shaderVarRefreshRate));
+                // Animate the material's float property (for fading, etc.)
+                // If the replica material should not fade out, you can skip this coroutine.
+                if(mR.material.HasProperty(shaderVarRef))
+                {
+                    StartCoroutine(AnimateMaterialFloat(mR.material, 0, shaderVarRate, shaderVarRefreshRate));
+                }
 
+                // Clean up the trail segment after a delay
                 Destroy(gO, meshDestroyDelay);
             }
 
@@ -65,10 +99,11 @@ public class MeshTrail : MonoBehaviour
         isTrailActive = false;
     }
 
-    IEnumerator AnimateMaterialFloat (Material mat, float goal, float rate, float refreshRate)
+    IEnumerator AnimateMaterialFloat(Material mat, float goal, float rate, float refreshRate)
     {
         float valueToAnimate = mat.GetFloat(shaderVarRef);
 
+        // Gradually decrease the float property until the goal is reached
         while (valueToAnimate > goal)
         {
             valueToAnimate -= rate;
