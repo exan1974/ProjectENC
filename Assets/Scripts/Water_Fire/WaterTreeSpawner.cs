@@ -2,8 +2,8 @@ using UnityEngine;
 
 public class WaterTreeSpawner : MonoBehaviour
 {
-    [Tooltip("Prefab for the tree to instantiate (should include TreeGrowthController).")]
-    [SerializeField] private GameObject treePrefab;
+    [Tooltip("List of tree prefabs to instantiate (each should include TreeGrowthController).")]
+    [SerializeField] private GameObject[] treePrefabs;
 
     [Tooltip("Layer mask for the ground. Water triggers tree spawning only on ground.")]
     [SerializeField] private LayerMask groundLayerMask;
@@ -11,10 +11,9 @@ public class WaterTreeSpawner : MonoBehaviour
     [Tooltip("Minimum distance required from any existing tree to spawn a new one.")]
     [SerializeField] private float spawnExclusionRadius = 5f;
 
-    // When water (this object) enters a trigger on the ground...
     private void OnTriggerEnter(Collider other)
     {
-        // Check if the collided object belongs to the ground (using the layer mask).
+        // Check if the collided object is on the ground.
         if ((groundLayerMask.value & (1 << other.gameObject.layer)) != 0)
         {
             Vector3 spawnPosition = transform.position;
@@ -30,10 +29,14 @@ public class WaterTreeSpawner : MonoBehaviour
                 }
             }
 
-            if (canSpawn)
+            if (canSpawn && treePrefabs.Length > 0)
             {
-                // Instantiate the tree at the water's position.
-                Instantiate(treePrefab, spawnPosition, Quaternion.identity);
+                // Randomly select a tree prefab from the array.
+                int randomIndex = Random.Range(0, treePrefabs.Length);
+                GameObject selectedPrefab = treePrefabs[randomIndex];
+
+                // Instantiate the selected tree prefab at the water's position.
+                Instantiate(selectedPrefab, spawnPosition, Quaternion.identity);
             }
 
             // Optionally, destroy the water object after it has hit the ground.

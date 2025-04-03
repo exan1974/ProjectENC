@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 6483370338926641574}
   - component: {fileID: 3125607068018381439}
   - component: {fileID: 1224528481628775808}
-  m_Layer: 10
+  m_Layer: 4
   m_Name: water
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -57,11 +57,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 45e1bdf9c5d64844f97f5028955a4f6d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  treePrefab: {fileID: 4303056833990202676, guid: 71f6568c4f7e132499b75d90a54c13f2, type: 3}
+  treePrefabs:
+  - {fileID: 2934897667964625187, guid: 225dba71d4dd7984ebacb21ef02049e5, type: 3}
+  - {fileID: 6814598865195953082, guid: 5005777565ce5a9418cddc2f2b29264b, type: 3}
   groundLayerMask:
     serializedVersion: 2
     m_Bits: 64
-  spawnExclusionRadius: 1
+  spawnExclusionRadius: 2
 --- !u!23 &6831769005178704998
 MeshRenderer:
   m_ObjectHideFlags: 0

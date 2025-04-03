@@ -9979,6 +9979,9 @@ MonoBehaviour:
   groundLayerMask:
     serializedVersion: 2
     m_Bits: 64
+  treeLayerMask:
+    serializedVersion: 2
+    m_Bits: 512
   groundFirePrefab: {fileID: 607788289840066366, guid: 81fb448b26c54a24aa944c515a00ed73, type: 3}
 --- !u!135 &5486351480650165896
 SphereCollider:
@@ -9999,7 +10002,7 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 0.48
+  m_Radius: 1.32
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!54 &9161641710089370511
 Rigidbody:

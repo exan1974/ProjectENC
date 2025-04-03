@@ -5,7 +5,7 @@ public class PositionResetter : MonoBehaviour
     [SerializeField] private MocapCameraPlacement _mocapCameraPlacement;
     private Vector3 _initialPosition;
     private Quaternion _initialRotation;
-    private float _animDuration;
+    private float _animDuration = 2.0f;
     private float _timeElapsed = 0;
 
     void Start()
@@ -15,7 +15,7 @@ public class PositionResetter : MonoBehaviour
         _initialRotation = transform.rotation;
 
         // Get the animation duration from the MocapCameraPlacement script
-        _animDuration = _mocapCameraPlacement.GetAnimDuration();
+       // _animDuration = _mocapCameraPlacement.GetAnimDuration();
     }
 
     void Update()

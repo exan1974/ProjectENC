@@ -14,10 +14,12 @@ public class FireballController : MonoBehaviour
     [Tooltip("Layer mask for the ground. The fireball will disappear when it enters a trigger on this layer.")]
     [SerializeField] private LayerMask groundLayerMask;
 
+    [Tooltip("Layer mask for trees that can be burned.")]
+    [SerializeField] private LayerMask treeLayerMask;
+
     [Tooltip("Prefab for the fire effect to instantiate upon hitting the ground.")]
     [SerializeField] private GameObject groundFirePrefab;
 
-    // Time when the fireball was launched.
     private float launchTime;
 
     void Awake()
@@ -29,18 +31,11 @@ public class FireballController : MonoBehaviour
         }
         else
         {
-            // Disable built-in gravity to use custom gravity.
             rb.useGravity = false;
         }
         launchTime = Time.time;
     }
 
-    /// <summary>
-    /// Launches the fireball by applying force gradually over the specified duration.
-    /// </summary>
-    /// <param name="direction">Normalized direction to launch the fireball.</param>
-    /// <param name="force">Total force to be applied.</param>
-    /// <param name="duration">Time (in seconds) over which the force is applied.</param>
     public void Launch(Vector3 direction, float force, float duration)
     {
         Debug.Log($"Launching fireball with force: {force} over duration: {duration}");
@@ -63,7 +58,6 @@ public class FireballController : MonoBehaviour
 
     void FixedUpdate()
     {
-        // Ramp up custom gravity over time.
         float timeSinceLaunch = Time.time - launchTime;
         float currentGravityMultiplier = Mathf.Lerp(0f, gravityMultiplier, Mathf.Clamp01(timeSinceLaunch / gravityRampUpTime));
         if (rb != null)
@@ -72,14 +66,24 @@ public class FireballController : MonoBehaviour
         }
     }
 
-    // When the fireball enters a trigger on the ground, instantiate the fire effect and destroy the fireball.
     private void OnTriggerEnter(Collider other)
     {
+        // Check for ground collision
         if ((groundLayerMask.value & (1 << other.gameObject.layer)) != 0)
         {
             if (groundFirePrefab != null)
             {
                 Instantiate(groundFirePrefab, transform.position, Quaternion.identity);
+            }
+            Destroy(gameObject);
+        }
+        // Check for tree collision
+        else if ((treeLayerMask.value & (1 << other.gameObject.layer)) != 0)
+        {
+            TreeGrowthController tree = other.GetComponent<TreeGrowthController>();
+            if (tree != null)
+            {
+                tree.IgniteTree();
             }
             Destroy(gameObject);
         }
