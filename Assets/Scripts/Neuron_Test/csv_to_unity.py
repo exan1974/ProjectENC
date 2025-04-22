@@ -1,68 +1,78 @@
-# this script works with csv_server_like_calc.py
-# offset of 15 digits prior to actual data, encoding/decoding is likely different than calc though
-
-# conda activate oscudp
-
-# start client first, then start server
-# kill server with crtl-c fist before killing client
-
-# import struct
+#!/usr/bin/env python3
 import time
 import socket
-import numpy as np
 import pandas as pd
 import struct
 
-
-
 # SETTINGS ===================================================================================
-fncsv = "G:\\BdeB\\Stage\\ProjectENC\\Assets\\Scripts\\Neuron_Test\\Data\\danse_impro_001.csv"
-# fncsv = "C:\\Users\\cgatti\\Documents\\CRITAC\\RDADance\\Data\\2024-12-13-UQAM\\trimmed_v1\\Leonie_fente_001_chr01_001.csv"
+# Path to your CSV file (update as needed)
+# fncsv = "G:\\BdeB\\Stage\\ProjectENC\\Assets\\Scripts\\Neuron_Test\\Data\\Equilibre main\\EquilibreMain_002.csv"
+fncsv = "G:\\BdeB\\Stage\\ProjectENC\\Assets\\Scripts\\Neuron_Test\\Data\\Acro\\Sequence_acro_001.csv"
+# Destination IP address and UDP port for streaming
+UDP_IP = "127.0.0.1"
+UDP_PORT = 7000
+# Set to True to loop the CSV data until you manually stop the script (e.g., with Ctrl-C)
+loop = True
+# Time delay between sending packets (in seconds)
+delay = 1/100
 
-UDP_IP = "127.0.0.1" # IP address to send data over ("127.0.0.1" if streaming to/from same computer)
-# UDP_IP = "10.0.0.192"
-UDP_PORT = 7000 # port number
-loop = True # toggle to loop sending data or not
-delay = 1/100 # time delay for sending each packet (this can be 0)
-data_prefix = '\data ' # string to add before numeric data stream (might be needed for Max/MSP to recieve OSC)
-# max_data_signif = 4 # number of decimal places
+# ===========================================================================================
+# Read the CSV file.
+# Note: We no longer use sep=' ' because the file appears to be comma-separated (the default)
+try:
+    df = pd.read_csv(fncsv, header=None)
+except Exception as e:
+    print(f"Error reading CSV file: {e}")
+    exit(1)
 
-# ============================================================================================
-df = pd.read_csv(fncsv, sep=' ',header=None)
+# Optionally, if the CSV’s first column is a frame number or some non-data value, you can skip it:
+# df = df.iloc[:, 1:]
+
+# Convert all data to floats to avoid struct.pack errors.
+try:
+    df = df.astype(float)
+except Exception as e:
+    print(f"Error converting CSV data to floats: {e}")
+    exit(1)
 
 NFRAMES = df.shape[0]
+n = df.shape[1]  # number of floats per row
 
-IDX = list(range(0,df.shape[1])) # don't take index 0 (frame number in csv file)
+# Create and connect the UDP socket.
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+try:
+    sock.connect((UDP_IP, UDP_PORT))
+except Exception as e:
+    print(f"Error connecting to {UDP_IP}:{UDP_PORT}: {e}")
+    exit(1)
+print(f"\n>> Streaming CSV data to {UDP_IP}:{UDP_PORT} ...")
 
-n=df.shape[1]
-
-data_names = df.columns.values[IDX].tolist() # data names as list of strings
-# print(data_names)
-
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # create connection
-sock.connect((UDP_IP, UDP_PORT))
-print('\n >> Streaming CSV data to ' + UDP_IP + '::' + str(UDP_PORT) + ' ...')
-
-
-# loop data stream
-if loop==True:
-  while True:    
-    for ff in range(NFRAMES):
-      # print(ff)
-      data2=df.iloc[ff,IDX].tolist()
-      #txt = data_prefix + ' '.join(list(map(str, [-1]*15 + df.iloc[ff,IDX].tolist()))) # add 15 numbers to replicate 15 element offset from calc
-      datab=struct.pack(str(n)+'f',*data2)
-      sock.send(datab)
-      time.sleep(delay)
-# stream data (no loop)
-else:
-  for ff in range(NFRAMES):
-    # print(ff)
-    data2=df.iloc[ff,IDX].tolist()
-    #txt = data_prefix + ' '.join(list(map(str, [-1]*15 + df.iloc[ff,IDX].tolist()))) # add 15 numbers to replicate 15 element offset from calc
-    datab=struct.pack(str(n)+'f',*data2)
-    sock.send(datab)
-    time.sleep(delay)
-
-sock.close() # close connection
-
+# Stream the CSV data.
+try:
+    if loop:
+        while True:
+            for ff in range(NFRAMES):
+                row_data = df.iloc[ff].tolist()
+                try:
+                    # Pack the row's floats into binary data. (e.g., if n=10, f"{n}f" becomes "10f")
+                    packed_data = struct.pack(f"{n}f", *row_data)
+                except struct.error as se:
+                    print(f"Error packing data at row {ff}: {se}")
+                    continue
+                sock.send(packed_data)
+                time.sleep(delay)
+    else:
+        for ff in range(NFRAMES):
+            row_data = df.iloc[ff].tolist()
+            try:
+                packed_data = struct.pack(f"{n}f", *row_data)
+            except struct.error as se:
+                print(f"Error packing data at row {ff}: {se}")
+                continue
+            sock.send(packed_data)
+            time.sleep(delay)
+except KeyboardInterrupt:
+    print("\nStreaming interrupted by user.")
+finally:
+    sock.close()
+    print("Socket closed.")

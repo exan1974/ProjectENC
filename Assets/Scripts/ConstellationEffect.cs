@@ -1,114 +1,192 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
-using TMPro;  // For TextMeshPro support
 
 public class ConstellationEffect : MonoBehaviour
 {
-    [Header("Prefabs and References")]
-    public GameObject posePrefab;           // The prefab used to capture the pose
-    public Transform characterRoot;         // The root of the animated character (e.g., the whole model)
-    public Transform characterCentralBone;  // The central bone (e.g., the Hips) to re-anchor the capture
-    public TextMeshProUGUI nameDisplay;     // External UI element to display the name on screen for the active snapshot
+    [Header("Prefabs & Skeleton")]
+    public GameObject posePrefab;            // your frozen‐pose rig prefab
+    public Transform characterRoot;          // live skeleton root
+    public Transform characterCentralBone;   // e.g. Hips, for re‐anchoring
 
-    [Header("Constellation Settings")]
-    public Transform centralPosition;       // The position where the new snapshot will be instantiated (exposed position)
-    public Transform[] storedPositions;     // Predefined positions for previously captured snapshots
-    public float scaleReduction = 0.5f;       // Scale reduction factor for snapshots moved to stored positions
+    [Header("Placement")]
+    public Transform centralPosition;        // where new poses spawn
+    public Transform[] storedPositions;      // where old poses end up
+    public float scaleReduction = 0.5f;      // how much older poses shrink
 
-    [Header("Name Settings")]
-    [Tooltip("List of possible names for the captured pose")]
-    public string[] names;                  // List of names to choose from randomly
+    [Header("Fade & Display Timing")]
+    [Tooltip("Seconds to fade in/out body and stars")]
+    public float fadeDuration = 0.5f;
+    [Tooltip("Seconds to stay fully visible at center")]
+    public float displayDuration = 2f;
 
-    // Internal state tracking
-    private int currentStoreIndex = 0;
-    private GameObject activeCapture = null;
+    int currentStoreIndex = 0;
 
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Space))
-        {
-            HandleSpacePress();
-        }
+            CapturePose();
     }
 
-    /// <summary>
-    /// Handles the Space key press:
-    /// - Moves any previous snapshot to a stored position.
-    /// - Instantiates a new snapshot at the central position and copies the animated pose to it.
-    /// - Re-anchors the snapshot based on the central bone.
-    /// - Chooses a random name from the list and updates the external UI display (nameDisplay).
-    /// </summary>
-    void HandleSpacePress()
+    void CapturePose()
     {
-        // If a previous capture exists, move it to a stored position and scale it down.
-        if (activeCapture != null)
+        if (currentStoreIndex >= storedPositions.Length)
         {
-            if (currentStoreIndex < storedPositions.Length)
-            {
-                activeCapture.transform.localScale *= scaleReduction;
-                activeCapture.transform.position = storedPositions[currentStoreIndex].position;
-                currentStoreIndex++;
-            }
-            else
-            {
-                Debug.LogWarning("No more stored positions available for additional captures.");
-            }
+            Debug.LogWarning("No more stored positions!");
+            return;
         }
 
-        // Instantiate a new snapshot at the central (exposed) position.
-        GameObject newCapture = Instantiate(posePrefab, centralPosition.position, centralPosition.rotation);
+        // 1) Instantiate & freeze the pose
+        GameObject capture = Instantiate(
+            posePrefab,
+            centralPosition.position,
+            centralPosition.rotation
+        );
+        if (capture.TryGetComponent<Animator>(out var anim))
+            anim.enabled = false;
+        CopyPoseRecursive(characterRoot, capture.transform);
 
-        // Optional: disable the Animator on the new snapshot so the pose remains frozen.
-        Animator newAnimator = newCapture.GetComponent<Animator>();
-        if (newAnimator != null)
-            newAnimator.enabled = false;
-
-        // Copy the animated pose from the character's skeleton to the new snapshot.
-        CopyPoseRecursive(characterRoot, newCapture.transform);
-
-        // Re-anchor the snapshot using the central bone.
+        // 2) Re‑anchor around the central bone
         if (characterCentralBone != null)
         {
-            // Find the corresponding bone in the new capture by name (assuming names match).
-            Transform targetCentralBone = newCapture.transform.Find(characterCentralBone.name);
-            if (targetCentralBone != null)
+            Transform newBone = capture.transform.Find(characterCentralBone.name);
+            if (newBone != null)
             {
-                // Compute the offset so that the new capture's central bone aligns with centralPosition.
-                Vector3 offset = newCapture.transform.position - targetCentralBone.position;
-                newCapture.transform.position = centralPosition.position + offset;
-            }
-            else
-            {
-                Debug.LogWarning("Central bone (" + characterCentralBone.name + ") not found in the new capture.");
+                Vector3 offset = capture.transform.position - newBone.position;
+                capture.transform.position = centralPosition.position + offset;
             }
         }
 
-        // Choose a random name from the names list and update the external UI.
-        string randomName = (names != null && names.Length > 0) ? names[Random.Range(0, names.Length)] : "Default Name";
-        if (nameDisplay != null)
-            nameDisplay.text = randomName;
+        // 3) Gather all SkinnedMeshRenderers for body‑alpha fading
+        var bodyRenderers = new List<Renderer>();
+        foreach (var sk in capture.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+        {
+            sk.materials = sk.materials; // instantiate materials
+            bodyRenderers.Add(sk);
+        }
 
-        // Set the new snapshot as the currently active capture.
-        activeCapture = newCapture;
+        // 4) Gather all MeshRenderers for star‑scale tweening
+        var stars = new List<StarData>();
+        foreach (var mr in capture.GetComponentsInChildren<MeshRenderer>(true))
+        {
+            // skip any skinned ones (just in case)
+            if (mr is SkinnedMeshRenderer) 
+                continue;
+
+            stars.Add(new StarData {
+                transform     = mr.transform,
+                originalScale = mr.transform.localScale
+            });
+        }
+
+        // 5) Start the fade/hold/move coroutine
+        StartCoroutine(PoseLifecycle(capture, bodyRenderers, stars, currentStoreIndex));
+        currentStoreIndex++;
     }
 
-    /// <summary>
-    /// Recursively copies transform data (localPosition, localRotation, localScale)
-    /// from the source animated character to the target snapshot. Assumes the hierarchies match.
-    /// </summary>
-    /// <param name="source">The source transform (animated character)</param>
-    /// <param name="target">The target transform (new snapshot)</param>
-    void CopyPoseRecursive(Transform source, Transform target)
+    IEnumerator PoseLifecycle(
+        GameObject capture,
+        List<Renderer> bodyRenderers,
+        List<StarData> stars,
+        int storeIdx
+    )
     {
-        target.localPosition = source.localPosition;
-        target.localRotation = source.localRotation;
-        target.localScale = source.localScale;
+        // INITIAL: body alpha=0, stars scale=0
+        SetBodyAlpha(bodyRenderers, 0f);
+        SetStarScale(stars,      0f);
 
-        for (int i = 0; i < source.childCount; i++)
+        // FADE IN center (0→1)
+        float t = 0f;
+        while (t < fadeDuration)
         {
-            if (i < target.childCount)
+            t += Time.deltaTime;
+            float f = Mathf.Clamp01(t / fadeDuration);
+            SetBodyAlpha(bodyRenderers, f);
+            SetStarScale(stars, f);
+            yield return null;
+        }
+        SetBodyAlpha(bodyRenderers, 1f);
+        SetStarScale(stars,      1f);
+
+        // HOLD fully visible
+        yield return new WaitForSeconds(displayDuration);
+
+        // FADE OUT center (1→0)
+        t = 0f;
+        while (t < fadeDuration)
+        {
+            t += Time.deltaTime;
+            float f = Mathf.Clamp01(t / fadeDuration);
+            SetBodyAlpha(bodyRenderers, 1f - f);
+            SetStarScale(stars,      1f - f);
+            yield return null;
+        }
+        SetBodyAlpha(bodyRenderers, 0f);
+        SetStarScale(stars,      0f);
+
+        // MOVE & shrink into stored slot
+        var stored = storedPositions[storeIdx];
+        capture.transform.position = stored.position;
+        capture.transform.rotation = stored.rotation;
+        capture.transform.localScale *= scaleReduction;
+
+        // FADE IN stored (0→1)
+        t = 0f;
+        while (t < fadeDuration)
+        {
+            t += Time.deltaTime;
+            float f = Mathf.Clamp01(t / fadeDuration);
+            SetBodyAlpha(bodyRenderers, f);
+            SetStarScale(stars, f);
+            yield return null;
+        }
+        SetBodyAlpha(bodyRenderers, 1f);
+        SetStarScale(stars,      1f);
+    }
+
+    // fades all body renderers’ material alpha
+    void SetBodyAlpha(List<Renderer> renderers, float alpha)
+    {
+        foreach (var rend in renderers)
+        {
+            foreach (var mat in rend.materials)
             {
-                CopyPoseRecursive(source.GetChild(i), target.GetChild(i));
+                if (mat.HasProperty("_Color"))
+                {
+                    Color c = mat.color;
+                    c.a = alpha;
+                    mat.color = c;
+                }
+                else if (mat.HasProperty("_BaseColor"))
+                {
+                    Color c = mat.GetColor("_BaseColor");
+                    c.a = alpha;
+                    mat.SetColor("_BaseColor", c);
+                }
             }
         }
+    }
+
+    // scales each star from 0→originalScale by factor
+    void SetStarScale(List<StarData> stars, float factor)
+    {
+        foreach (var sd in stars)
+            sd.transform.localScale = sd.originalScale * factor;
+    }
+
+    // copy local transforms so the pose is frozen
+    void CopyPoseRecursive(Transform src, Transform dst)
+    {
+        dst.localPosition = src.localPosition;
+        dst.localRotation = src.localRotation;
+        dst.localScale    = src.localScale;
+        for (int i = 0; i < src.childCount && i < dst.childCount; i++)
+            CopyPoseRecursive(src.GetChild(i), dst.GetChild(i));
+    }
+
+    class StarData
+    {
+        public Transform transform;
+        public Vector3   originalScale;
     }
 }
