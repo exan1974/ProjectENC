@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: bd4c59a7c4bac564192ad68c0c27a243
+timeCreated: 1435242900
+licenseType: Store
+TextScriptImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 40374
+  packageName: Time of day & Weather system
+  packageVersion: 1.1
+  assetPath: Assets/TimeOfDay&WeatherSystem/Documents/ContactInformation.txt
+  uploadId: 86522

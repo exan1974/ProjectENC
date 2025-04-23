@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a46bb5ebf1f910f469f4f759299304f3
+timeCreated: 1434879777
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 40374
+  packageName: Time of day & Weather system
+  packageVersion: 1.1
+  assetPath: Assets/TimeOfDay&WeatherSystem/Content/Materials/M_Skybox.mat
+  uploadId: 86522

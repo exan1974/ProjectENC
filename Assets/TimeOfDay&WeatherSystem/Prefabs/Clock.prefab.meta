@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7e8c1bf609abe2c478097bd95434945d
+timeCreated: 1434878932
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 40374
+  packageName: Time of day & Weather system
+  packageVersion: 1.1
+  assetPath: Assets/TimeOfDay&WeatherSystem/Prefabs/Clock.prefab
+  uploadId: 86522

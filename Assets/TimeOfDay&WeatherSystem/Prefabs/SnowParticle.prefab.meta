@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d3d099c64bbc9d8478685b570a433a8a
+timeCreated: 1434878956
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 40374
+  packageName: Time of day & Weather system
+  packageVersion: 1.1
+  assetPath: Assets/TimeOfDay&WeatherSystem/Prefabs/SnowParticle.prefab
+  uploadId: 86522

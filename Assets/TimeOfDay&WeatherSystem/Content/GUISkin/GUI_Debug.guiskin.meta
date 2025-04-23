@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c8e8dedff5b6e7441ac0209a25b1461e
+timeCreated: 1434551804
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 40374
+  packageName: Time of day & Weather system
+  packageVersion: 1.1
+  assetPath: Assets/TimeOfDay&WeatherSystem/Content/GUISkin/GUI_Debug.guiskin
+  uploadId: 86522

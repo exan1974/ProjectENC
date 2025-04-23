@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 7a7174e887b3fd74b98ff4be38e1807b
+timeCreated: 1433682094
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 40374
+  packageName: Time of day & Weather system
+  packageVersion: 1.1
+  assetPath: Assets/TimeOfDay&WeatherSystem/Code/WeatherSystem/Weather_Controller.cs
+  uploadId: 86522

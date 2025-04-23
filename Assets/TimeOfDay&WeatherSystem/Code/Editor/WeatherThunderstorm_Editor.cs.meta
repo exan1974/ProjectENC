@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: a07309859c0bedd41a93bf2da1db9f9b
+timeCreated: 1434891070
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 40374
+  packageName: Time of day & Weather system
+  packageVersion: 1.1
+  assetPath: Assets/TimeOfDay&WeatherSystem/Code/Editor/WeatherThunderstorm_Editor.cs
+  uploadId: 86522

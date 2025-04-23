@@ -10,7 +10,7 @@ Material:
   m_Name: Ball
   m_Shader: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
   m_Parent: {fileID: 2100000, guid: 6c49ac7b6b334634e93acecab91b6303, type: 2}
-  m_ModifiedSerializedProperties: 0
+  m_ModifiedSerializedProperties: 16
   m_ValidKeywords:
   - _ALPHAPREMULTIPLY_ON
   - _SURFACE_TYPE_TRANSPARENT
@@ -18,7 +18,7 @@ Material:
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
+  m_CustomRenderQueue: 3000
   stringTagMap:
     RenderType: Transparent
   disabledShaderPasses:
@@ -30,7 +30,11 @@ Material:
     serializedVersion: 3
     m_TexEnvs: []
     m_Ints: []
-    m_Floats: []
+    m_Floats:
+    - _DstBlend: 10
+    - _DstBlendAlpha: 10
+    - _Surface: 1
+    - _ZWrite: 0
     m_Colors:
     - _BaseColor: {r: 1, g: 0.49138594, b: 0, a: 1}
     - _Color: {r: 1, g: 0.49138594, b: 0, a: 1}

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a7404eeab8d5e49489a17e15938e8ec1
+timeCreated: 1434878918
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 40374
+  packageName: Time of day & Weather system
+  packageVersion: 1.1
+  assetPath: Assets/TimeOfDay&WeatherSystem/Prefabs/WeatherMaster.prefab
+  uploadId: 86522

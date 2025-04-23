@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c13662c2ffa56d54c8ea9258d571bc1a
+timeCreated: 1434879777
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 40374
+  packageName: Time of day & Weather system
+  packageVersion: 1.1
+  assetPath: Assets/TimeOfDay&WeatherSystem/Content/Materials/M_Particle_RainColor.mat
+  uploadId: 86522

@@ -27,6 +27,7 @@ public class JugglingCascade : MonoBehaviour
 
     // Cloud prefab for vapor effect (make sure it has a Rigidbody and a collider)
     public GameObject cloudPrefab;
+    public Animator animator;
 
     private class ThrowObject
     {
@@ -45,6 +46,7 @@ public class JugglingCascade : MonoBehaviour
 
     void Start()
     {
+        animator.SetInteger("AnimIndex", 8);
         GameObject[] set = useClubs ? clubs : balls;
 
         // Initial positions: 1 object per hand, 1 in air

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 9ad176df3dce57342bacd7fac6ac424d
+timeCreated: 1434879777
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 40374
+  packageName: Time of day & Weather system
+  packageVersion: 1.1
+  assetPath: Assets/TimeOfDay&WeatherSystem/Content/Materials/M_MinuteHandColor.mat
+  uploadId: 86522

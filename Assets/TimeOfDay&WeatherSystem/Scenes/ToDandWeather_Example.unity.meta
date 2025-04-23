@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f15015e5b631853429743f03ebf53481
+timeCreated: 1434879023
+licenseType: Store
+DefaultImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 40374
+  packageName: Time of day & Weather system
+  packageVersion: 1.1
+  assetPath: Assets/TimeOfDay&WeatherSystem/Scenes/ToDandWeather_Example.unity
+  uploadId: 86522
