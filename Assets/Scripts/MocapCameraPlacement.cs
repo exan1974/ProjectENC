@@ -10,7 +10,7 @@ using UnityEditor;
 public enum PlacementMode { Circle, Room }
 public enum SurfaceType { Cylinder, Dome }
 
-public enum SelectedAnimation {  Acrobatie, Cerceaux, Contorsion, Corde, Roue, Sangle, Tissu, Trampoline }
+public enum SelectedAnimation {  Acrobatie, Cerceaux, Contorsion, Corde, Roue, Sangle, Tissu, Trampoline, Jonglerie }
 
 //[ExecuteInEditMode]
 public class MocapCameraPlacement : MonoBehaviour

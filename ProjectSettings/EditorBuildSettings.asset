@@ -5,9 +5,57 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
-    path: Assets/Scenes/OldScenes/SampleScene.unity
+  - enabled: 0
+    path: Assets/Scenes/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
+  - enabled: 1
+    path: Assets/Scenes/TitleScreen.unity
+    guid: 6108b4135ca30604dab71642c66790ae
+  - enabled: 1
+    path: Assets/Scenes/PRATIC/01_Test_Mirror.unity
+    guid: edb681628d92c984fb1c20bf629b14ee
+  - enabled: 1
+    path: Assets/Scenes/PRATIC/02_Test_Auras.unity
+    guid: ce92130bccf72be4698b4b459328e830
+  - enabled: 1
+    path: Assets/Scenes/PRATIC/03_Test_Inverse.unity
+    guid: ca6f97f2e1afb7a41b76230cec325f8e
+  - enabled: 1
+    path: Assets/Scenes/PRATIC/04.0_SunWheel.unity
+    guid: 41389fe78069c784783111809ac1072c
+  - enabled: 1
+    path: Assets/Scenes/PRATIC/04.1_SunWheel_2D.unity
+    guid: 5ca8d2e3a1550b54e828ae7d110ca747
+  - enabled: 1
+    path: Assets/Scenes/PRATIC/05_ConstellationsFX.unity
+    guid: 07d5f113ebe5e4342a65c3f37ec2b3a3
+  - enabled: 1
+    path: Assets/Scenes/PRATIC/06_StarShinerFX.unity
+    guid: b9a85bf6959c7c8438f62f2fb426873d
+  - enabled: 1
+    path: Assets/Scenes/PRATIC/07_Glitch_Wheel.unity
+    guid: 84637cb7946f6454e8929e353deddb1e
+  - enabled: 1
+    path: Assets/Scenes/PRATIC/09_Multi_Juggling.unity
+    guid: e1c51cb6c42db2748844848a38ab3377
+  - enabled: 1
+    path: Assets/Scenes/ScenesDivers/CameraPlacement.unity
+    guid: 4cd3c4808dc2cf3459b9060a46876811
+  - enabled: 1
+    path: Assets/Scenes/ScenesDivers/FireWaterFX.unity
+    guid: d065a4462800c6b40a48c43a3bc8ba21
+  - enabled: 1
+    path: Assets/Scenes/ScenesDivers/Juggling.unity
+    guid: 710377dd859388143b08b0900aa50a8b
+  - enabled: 1
+    path: Assets/Scenes/ScenesDivers/JugglingExcess.unity
+    guid: 0d17418e5755c8b4d90ae3690d85e1d0
+  - enabled: 1
+    path: Assets/Scenes/ScenesDivers/PurpleTrailFX.unity
+    guid: fb6d6d749b977064c8d8f22400e531e0
+  - enabled: 1
+    path: Assets/Scenes/ScenesDivers/Wheel.unity
+    guid: 19058f1850b507a478f7293cb91e91c0
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

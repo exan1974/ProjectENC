@@ -2,6 +2,7 @@
   "dependencies": {
     "com.avaturn.webview": "https://github.com/avaturn/avaturn-unity-webview-sdk.git",
     "com.kink3d.mirrors": "https://github.com/Kink3d/kMirrors.git",
+    "com.unity.2d.sprite": "1.0.0",
     "com.unity.ai.navigation": "2.0.6",
     "com.unity.animation.rigging": "1.3.0",
     "com.unity.cloud.gltfast": "6.12.0",
