@@ -1,0 +1,83 @@
+{
+    "m_SGVersion": 3,
+    "m_Type": "UnityEditor.ShaderGraph.GraphData",
+    "m_ObjectId": "a1b2c3d4e5f6",
+    "m_Properties": [
+        {
+            "m_Id": "texture2d_property_id",
+            "m_DisplayName": "MainTex",
+            "m_SlotType": 0,
+            "m_Priority": 0,
+            "m_Hidden": false,
+            "m_ShaderOutputName": "MainTex",
+            "m_StageCapability": 2,
+            "m_BareResource": false,
+            "m_Texture": {
+                "m_SerializedTexture": "",
+                "m_Guid": ""
+            },
+            "m_DefaultType": 0
+        },
+        {
+            "m_Id": "speed_property_id",
+            "m_DisplayName": "Speed",
+            "m_SlotType": 0,
+            "m_Priority": 0,
+            "m_Hidden": false,
+            "m_ShaderOutputName": "Speed",
+            "m_StageCapability": 3,
+            "m_Value": 0.2,
+            "m_DefaultValue": 0.2,
+            "m_Labels": []
+        },
+        {
+            "m_Id": "wave_speed_property_id",
+            "m_DisplayName": "WaveSpeed",
+            "m_SlotType": 0,
+            "m_Priority": 0,
+            "m_Hidden": false,
+            "m_ShaderOutputName": "WaveSpeed",
+            "m_StageCapability": 3,
+            "m_Value": 0.2,
+            "m_DefaultValue": 0.2,
+            "m_Labels": []
+        },
+        {
+            "m_Id": "wave_amplitude_property_id",
+            "m_DisplayName": "WaveAmplitude",
+            "m_SlotType": 0,
+            "m_Priority": 0,
+            "m_Hidden": false,
+            "m_ShaderOutputName": "WaveAmplitude",
+            "m_StageCapability": 3,
+            "m_Value": 0.2,
+            "m_DefaultValue": 0.2,
+            "m_Labels": []
+        },
+        {
+            "m_Id": "smoothness_property_id",
+            "m_DisplayName": "Smoothness",
+            "m_SlotType": 0,
+            "m_Priority": 0,
+            "m_Hidden": false,
+            "m_ShaderOutputName": "Smoothness",
+            "m_StageCapability": 3,
+            "m_Value": 1.5,
+            "m_DefaultValue": 1.5,
+            "m_Labels": []
+        }
+    ],
+    "m_Keywords": [],
+    "m_Nodes": [
+        // Node definitions would go here but they're quite complex for JSON
+        // It's better to guide you through manual creation
+    ],
+    "m_CategoryData": [
+        {
+            "m_Id": "category_id",
+            "m_Name": "Properties"
+        }
+    ],
+    "m_CustomEditorGUI": "",
+    "m_SerializableNodes": []
+} 

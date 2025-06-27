@@ -1,0 +1,40 @@
+{
+    "m_SGVersion": 3,
+    "m_Type": "UnityEditor.ShaderGraph.GraphData",
+    "m_ObjectId": "unique_id",
+    "m_Properties": [
+        {
+            "m_Id": "maintex_id",
+            "m_DisplayName": "MainTex",
+            "m_SlotType": 0,
+            "m_ShaderOutputName": "MainTex",
+            "m_StageCapability": 2,
+            "m_BareResource": false,
+            "m_Texture": {
+                "m_SerializedTexture": "",
+                "m_Guid": ""
+            },
+            "m_DefaultType": 0
+        },
+        {
+            "m_Id": "speed_id",
+            "m_DisplayName": "Speed",
+            "m_SlotType": 0,
+            "m_ShaderOutputName": "Speed",
+            "m_StageCapability": 3,
+            "m_Value": 0.2,
+            "m_DefaultValue": 0.2,
+            "m_Labels": []
+        },
+        {
+            "m_Id": "rotation_speed_id",
+            "m_DisplayName": "RotationSpeed",
+            "m_SlotType": 0,
+            "m_ShaderOutputName": "RotationSpeed",
+            "m_StageCapability": 3,
+            "m_Value": 0.1,
+            "m_DefaultValue": 0.1,
+            "m_Labels": []
+        }
+    ]
+} 

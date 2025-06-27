@@ -20,28 +20,25 @@ TagManager:
   - Star
   - Balls
   - Player
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
+  - Terre
+  - Organic
+  - Pierre
+  - Vegetation
+  - Outline
+  - TrailEffects
+  - Background
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: Background
+    uniqueID: 1234567890
+    locked: 0
+  - name: TrailEffects
+    uniqueID: 1234567891
+    locked: 0
+  - name: Player
+    uniqueID: 1234567892
     locked: 0
   m_RenderingLayers:
   - Default
