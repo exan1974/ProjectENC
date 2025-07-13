@@ -7,7 +7,7 @@ public class ConstellationEffect : MonoBehaviour
     [Header("Prefabs & Skeleton")]
     public GameObject posePrefab;            // your frozen‐pose rig prefab
     public Transform characterRoot;          // live skeleton root
-    public Transform characterCentralBone;   // e.g. Hips, for re‐anchoring
+    public Transform characterCentralBone;   // e.g. Hips, for re‑anchoring
 
     [Header("Placement")]
     public Transform centralPosition;        // where new poses spawn
@@ -20,12 +20,37 @@ public class ConstellationEffect : MonoBehaviour
     [Tooltip("Seconds to stay fully visible at center")]
     public float displayDuration = 2f;
 
+    [Header("Controls")]
+    [Tooltip("Key to trigger the constellation effect")]
+    public KeyCode triggerKey = KeyCode.Space;
+    [Tooltip("Use timer instead of key press")]
+    public bool useTimer = false;
+    [Tooltip("Time interval between automatic captures (in seconds)")]
+    public float captureInterval = 3f;
+    private float m_timeUntilNextCapture;
+
     int currentStoreIndex = 0;
+
+    void Start()
+    {
+        m_timeUntilNextCapture = captureInterval;
+    }
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (useTimer)
+        {
+            m_timeUntilNextCapture -= Time.deltaTime;
+            if (m_timeUntilNextCapture <= 0)
+            {
+                CapturePose();
+                m_timeUntilNextCapture = captureInterval;
+            }
+        }
+        else if (Input.GetKeyDown(triggerKey))
+        {
             CapturePose();
+        }
     }
 
     void CapturePose()

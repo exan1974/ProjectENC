@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 [ExecuteAlways]
 public class FaceAudienceMaterialFade : MonoBehaviour
@@ -12,16 +13,16 @@ public class FaceAudienceMaterialFade : MonoBehaviour
     public float angleThreshold = 45f;
 
     [Header("Fade Material")]
-    [Tooltip("Material whose alpha will fade when entering/exiting the no-see zone.")]
-    public Material targetMaterial;
+    [Tooltip("Materials whose alpha will fade in sequence when entering/exiting the no-see zone.")]
+    public List<Material> targetMaterials = new List<Material>();
 
     [Header("Fade Settings")]
-    [Tooltip("Time in seconds to fade in (become visible).")]
-    public float fadeInDuration = 0.5f;
-    [Tooltip("Time in seconds to fade out (become transparent).")]
-    public float fadeOutDuration = 0.5f;
+    [Tooltip("Minimum time in seconds for the fade transition (applies to both in and out, randomized each time).")]
+    [SerializeField] private float m_MinFadeDuration = 0.5f;
+    [Tooltip("Maximum time in seconds for the fade transition (applies to both in and out, randomized each time).")]
+    [SerializeField] private float m_MaxFadeDuration = 1.5f;
     [Tooltip("How long the screen stays black on scene load.")]
-    public float initialBlackDuration = 1f;
+    [HideInInspector] public float initialBlackDuration = 1f;
 
     [Header("Fade Curves")]
     [Tooltip("Animation curve for fade in. X-axis is time (0-1), Y-axis is alpha progress (0-1).")]
@@ -39,55 +40,73 @@ public class FaceAudienceMaterialFade : MonoBehaviour
     );
 
     // Internal state
-    private float currentAlpha = 0f;
     private float fadeProgress = 0f;
     private float cosThreshold;
     private bool wasLastStateFacingAudience;
     private float blackTimer = 0f;
     private bool blackTimerJustEnded = false;
     private bool hasFadedOutOnce = false;
+    private float m_CurrentFadeDuration = 1f;
+
+    void OnValidate()
+    {
+        m_MinFadeDuration = Mathf.Max(0.01f, m_MinFadeDuration);
+        m_MaxFadeDuration = Mathf.Max(0.01f, m_MaxFadeDuration);
+        if (m_MinFadeDuration > m_MaxFadeDuration)
+        {
+            float temp = m_MinFadeDuration;
+            m_MinFadeDuration = m_MaxFadeDuration;
+            m_MaxFadeDuration = temp;
+        }
+    }
 
     void Start()
     {
-        if (targetMaterial == null)
+        if (targetMaterials == null || targetMaterials.Count == 0)
         {
-            Debug.LogError("FaceAudienceMaterialFade: No targetMaterial assigned.");
+            Debug.LogError("FaceAudienceMaterialFade: No targetMaterials assigned.");
             enabled = false;
             return;
         }
-
-        // Prepare material for transparency
-        if (targetMaterial.HasProperty("_Color"))
+        // Prepare all materials for transparency
+        foreach (var mat in targetMaterials)
         {
-            Color col = targetMaterial.color;
-            col.a = 1f;
-            targetMaterial.color = col;
-
-            // If using Standard shader, switch to transparent
-            if (targetMaterial.shader.name.Contains("Standard"))
+            if (mat == null) continue;
+            if (mat.HasProperty("_Color"))
             {
-                targetMaterial.SetFloat("_Mode", 2f);
-                targetMaterial.EnableKeyword("_ALPHABLEND_ON");
-                targetMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                Color col = mat.color;
+                col.a = 1f;
+                mat.color = col;
+                if (mat.shader.name.Contains("Standard"))
+                {
+                    mat.SetFloat("_Mode", 2f);
+                    mat.EnableKeyword("_ALPHABLEND_ON");
+                    mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                }
             }
         }
-
-        // Precompute cosine of the threshold angle for dot comparison
         cosThreshold = Mathf.Cos(angleThreshold * Mathf.Deg2Rad);
         blackTimer = 0f;
         blackTimerJustEnded = false;
+        m_CurrentFadeDuration = Random.Range(m_MinFadeDuration, m_MaxFadeDuration);
     }
 
     void Update()
     {
+        if (targetMaterials == null || targetMaterials.Count == 0) return;
+        int matCount = targetMaterials.Count;
         if (blackTimer < initialBlackDuration)
         {
             blackTimer += Time.deltaTime;
-            if (targetMaterial.HasProperty("_Color"))
+            foreach (var mat in targetMaterials)
             {
-                Color col = targetMaterial.color;
-                col.a = 1f;
-                targetMaterial.color = col;
+                if (mat == null) continue;
+                if (mat.HasProperty("_Color"))
+                {
+                    Color col = mat.color;
+                    col.a = 1f;
+                    mat.color = col;
+                }
             }
             if (blackTimer >= initialBlackDuration)
             {
@@ -95,86 +114,61 @@ public class FaceAudienceMaterialFade : MonoBehaviour
             }
             return;
         }
-
         if (blackTimerJustEnded)
         {
             float dotInit = character != null ? Vector3.Dot(character.forward.normalized, Vector3.forward) : 1f;
             bool isFacingAudienceInit = dotInit >= cosThreshold;
-            if (isFacingAudienceInit)
+            float[] initialAlphas = new float[matCount];
+            for (int i = 0; i < matCount; i++) initialAlphas[i] = isFacingAudienceInit ? 1f : 1f;
+            for (int i = 0; i < matCount; i++)
             {
-                fadeProgress = 1f;
-                currentAlpha = 1f;
-                if (targetMaterial.HasProperty("_Color"))
+                var mat = targetMaterials[i];
+                if (mat == null) continue;
+                if (mat.HasProperty("_Color"))
                 {
-                    Color col = targetMaterial.color;
-                    col.a = 1f;
-                    targetMaterial.color = col;
-                }
-            }
-            else
-            {
-                fadeProgress = 0f;
-                currentAlpha = 1f;
-                if (targetMaterial.HasProperty("_Color"))
-                {
-                    Color col = targetMaterial.color;
-                    col.a = 1f;
-                    targetMaterial.color = col;
+                    Color col = mat.color;
+                    col.a = initialAlphas[i];
+                    mat.color = col;
                 }
             }
             blackTimerJustEnded = false;
         }
-
         if (character == null) return;
-
         float dot = Vector3.Dot(character.forward.normalized, Vector3.forward);
         bool isFacingAudience = dot >= cosThreshold;
-
-        // Only reset fadeProgress when changing direction
         if (wasLastStateFacingAudience != isFacingAudience)
         {
             fadeProgress = 0f;
+            m_CurrentFadeDuration = Random.Range(m_MinFadeDuration, m_MaxFadeDuration);
         }
-
-        // If facing the audience and fadeProgress is 1, do not increment further
-        if (isFacingAudience && fadeProgress >= 1f)
+        AnimationCurve currentCurve = isFacingAudience ? fadeInCurve : fadeOutCurve;
+        float fadeDuration = Mathf.Max(m_CurrentFadeDuration, 0.001f);
+        float totalFadeDuration = fadeDuration * matCount;
+        fadeProgress = Mathf.Min(fadeProgress + (Time.deltaTime / totalFadeDuration), 1f);
+        // For fade-in, fade in reverse order; for fade-out, fade in normal order
+        for (int i = 0; i < matCount; i++)
         {
+            int matIndex = isFacingAudience ? (matCount - 1 - i) : i;
+            float matStart = (float)i / matCount;
+            float matEnd = (float)(i + 1) / matCount;
+            float matLocalProgress = Mathf.InverseLerp(matStart, matEnd, fadeProgress);
+            matLocalProgress = Mathf.Clamp01(matLocalProgress);
+            float evaluatedProgress = currentCurve.Evaluate(matLocalProgress);
+            float alpha = isFacingAudience ? evaluatedProgress : 1f - evaluatedProgress;
             // Only allow fade-in if hasFadedOutOnce is true
-            currentAlpha = hasFadedOutOnce ? 1f : 1f;
-        }
-        else if (isFacingAudience && !hasFadedOutOnce)
-        {
-            // Before first fade-out, keep alpha at 1
-            currentAlpha = 1f;
-        }
-        else
-        {
-            // Choose fade duration and curve based on direction
-            float fadeDuration = isFacingAudience ? fadeInDuration : fadeOutDuration;
-            AnimationCurve currentCurve = isFacingAudience ? fadeInCurve : fadeOutCurve;
-            fadeDuration = Mathf.Max(fadeDuration, 0.001f);
-            fadeProgress = Mathf.Min(fadeProgress + (Time.deltaTime / fadeDuration), 1f);
-            float evaluatedProgress = currentCurve.Evaluate(fadeProgress);
-            if (!isFacingAudience)
-            {
-                evaluatedProgress = 1f - evaluatedProgress;
-            }
-            currentAlpha = evaluatedProgress;
-            // If fade-out just completed, set flag
-            if (!isFacingAudience && currentAlpha <= 0.001f)
-            {
+            if (isFacingAudience && !hasFadedOutOnce)
+                alpha = 1f;
+            if (!isFacingAudience && alpha <= 0.001f)
                 hasFadedOutOnce = true;
+            var mat = targetMaterials[matIndex];
+            if (mat == null) continue;
+            if (mat.HasProperty("_Color"))
+            {
+                Color col = mat.color;
+                col.a = alpha;
+                mat.color = col;
             }
         }
-
-        // Apply alpha to material
-        if (targetMaterial.HasProperty("_Color"))
-        {
-            Color col = targetMaterial.color;
-            col.a = currentAlpha;
-            targetMaterial.color = col;
-        }
-
         wasLastStateFacingAudience = isFacingAudience;
     }
 }

@@ -63,9 +63,9 @@ public class MeshTrail : MonoBehaviour
             return;
         }
 
-        isTrailActive = true;
+            isTrailActive = true;
         StartCoroutine(ActivateTrail(activeTime));
-    }
+        }
 
     private IEnumerator ActivateTrail(float timeActive)
     {
@@ -77,8 +77,8 @@ public class MeshTrail : MonoBehaviour
 
             if (trailsPerFrame > 0f && frameCounter % interval == 0)
             {
-                for (int i = 0; i < skinnedMeshRenderers.Length; i++)
-                {
+            for (int i = 0; i < skinnedMeshRenderers.Length; i++)
+            {
                     if (skinnedMeshRenderers[i] == null) continue;
 
                     GameObject trailObject = new GameObject("Trail_" + i);
@@ -87,8 +87,8 @@ public class MeshTrail : MonoBehaviour
                     MeshRenderer meshRenderer = trailObject.AddComponent<MeshRenderer>();
                     MeshFilter meshFilter = trailObject.AddComponent<MeshFilter>();
 
-                    Mesh mesh = new Mesh();
-                    skinnedMeshRenderers[i].BakeMesh(mesh);
+                Mesh mesh = new Mesh();
+                skinnedMeshRenderers[i].BakeMesh(mesh);
                     meshFilter.mesh = mesh;
 
                     Material instanceMaterial = new Material(trailMaterial);
@@ -121,6 +121,6 @@ public class MeshTrail : MonoBehaviour
         }
 
         Destroy(trailObject);
+        }
     }
-}
 

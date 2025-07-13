@@ -7,6 +7,8 @@ public class JugglingCascadePrefab : MonoBehaviour
     [Header("Juggler Hands")]
     public Transform leftHand;
     public Transform rightHand;
+    private GameObject m_avatar;
+    [SerializeField] private float rotationSmoothSpeed = 5f;
 
     [Header("Ball & Club Settings")]
     public bool useClubs = false;
@@ -46,6 +48,9 @@ public class JugglingCascadePrefab : MonoBehaviour
 
     void Start()
     {
+        // Get reference to own GameObject
+        m_avatar = gameObject;
+
         // Instantiate 3 balls as children of this GameObject
         if (!useClubs && ballPrefab != null)
         {
@@ -94,6 +99,13 @@ public class JugglingCascadePrefab : MonoBehaviour
     {
         globalTime += Time.deltaTime;
         GameObject[] set = useClubs ? clubs : balls;
+
+        // Smooth rotation to zero
+        if (m_avatar != null)
+        {
+            Quaternion targetRotation = Quaternion.Euler(0, 0, 0);
+            m_avatar.transform.rotation = Quaternion.Lerp(m_avatar.transform.rotation, targetRotation, Time.deltaTime * rotationSmoothSpeed);
+        }
 
         // Throw timing
         if (globalTime >= activeThrows.Count * throwInterval)

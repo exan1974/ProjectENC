@@ -24,6 +24,10 @@ public class ArtistProximityUI : MonoBehaviour
     [Range(0.1f, 10f)]
     public float smoothingSpeed = 2f;
 
+    [Header("Alpha Curve")]
+    [Tooltip("Curve to control alpha based on normalized distance (x: normalized distance, y: alpha)")]
+    public AnimationCurve alphaCurve = AnimationCurve.Linear(0, 0, 1, 1);
+
     private float currentAlpha;
     private float targetAlpha;
     private Color imageColor;
@@ -52,12 +56,10 @@ public class ArtistProximityUI : MonoBehaviour
 
         // Map distance to 0-1 range (closer = more transparent)
         float normalizedDistance = Mathf.InverseLerp(minDistance, maxDistance, distance);
-        
-        // Clamp the normalized distance
         normalizedDistance = Mathf.Clamp01(normalizedDistance);
 
-        // Set target alpha (now closer = 0, further = 1)
-        targetAlpha = normalizedDistance;
+        // Use the curve to determine alpha
+        targetAlpha = alphaCurve.Evaluate(normalizedDistance);
 
         // Smoothly interpolate current alpha
         currentAlpha = Mathf.Lerp(

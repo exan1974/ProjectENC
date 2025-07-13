@@ -12,6 +12,11 @@ public class BufferedNeuronMimic : MonoBehaviour
     [Header("Target (Static Root)")]
     public Transform targetRoot;
 
+    [Header("Configuration")]
+    [SerializeField]
+    [Tooltip("Maximum time in seconds to keep frames in the buffer")]
+    private float maxBufferTime = 10f;
+
     [Header("UI References")]
     public Button freezeButton;
     public Button slowDownButton;
@@ -200,8 +205,8 @@ public class BufferedNeuronMimic : MonoBehaviour
             }
 
         frameBuffer.Add(frame);
-        // Remove old frames >10s
-        while (frameBuffer.Count > 1 && frameBuffer[1].timestamp < time - 10f)
+        // Remove old frames beyond maxBufferTime
+        while (frameBuffer.Count > 1 && frameBuffer[1].timestamp < time - maxBufferTime)
         {
             frameBuffer.RemoveAt(0);
             if (currentPlaybackIndex > 0) currentPlaybackIndex--;

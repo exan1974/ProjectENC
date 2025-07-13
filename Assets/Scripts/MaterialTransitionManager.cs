@@ -19,6 +19,7 @@ public class MaterialTransitionManager : MonoBehaviour
     [SerializeField] private float m_transitionDuration = 2f;
     [SerializeField] private AnimationCurve m_transitionCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
     [SerializeField] private bool usePoseTrigger = false;
+    [SerializeField] private KeyCode triggerKey = KeyCode.Return;
     [Header("Pose Detection")]
     [Tooltip("Transform of the right hand (for up direction)")]
     [SerializeField] private Transform rightHand;
@@ -67,8 +68,8 @@ public class MaterialTransitionManager : MonoBehaviour
 
         if (!usePoseTrigger)
         {
-            // Check for Enter key press
-            if (Input.GetKeyDown(KeyCode.Return) && !m_isTransitioning)
+            // Check for trigger key press
+            if (Input.GetKeyDown(triggerKey) && !m_isTransitioning)
             {
                 StartTransition();
             }

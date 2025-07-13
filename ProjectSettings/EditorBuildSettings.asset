@@ -12,8 +12,8 @@ EditorBuildSettings:
     path: Assets/Scenes/Stage_PRATIC/TitleScreen.unity
     guid: 6108b4135ca30604dab71642c66790ae
   - enabled: 1
-    path: Assets/Scenes/Projet_PRATIC/02_SpeedCopy_2.unity
-    guid: 0ea97ad956153dc459060e26dfb6c913
+    path: Assets/Scenes/Projet_PRATIC/02_SpeedCopy_Mirror.unity
+    guid: 8f506a76f78c4fa4d90c1ecaba7b4937
   - enabled: 1
     path: Assets/Scenes/Projet_PRATIC/03_ColorBlend.unity
     guid: 3b7967601cdb9294abd3802076794cfb
@@ -27,11 +27,11 @@ EditorBuildSettings:
     path: Assets/Scenes/Projet_PRATIC/07_ConstellationsFX 1.unity
     guid: ffe7dfe94a834e145826f558a39eb690
   - enabled: 1
-    path: Assets/Scenes/Projet_PRATIC/08_GlitchCopy.unity
-    guid: 181154b0aa6b6994e8081131f5a5b8c5
+    path: Assets/Scenes/Projet_PRATIC/08_GlitchCopy_Mirror.unity
+    guid: e8760683c15fbdf4f8e72a7f42e6d674
   - enabled: 1
-    path: Assets/Scenes/Projet_PRATIC/09_Elementals.unity
-    guid: 5b140b26cdb925440b77827bac581af5
+    path: Assets/Scenes/Projet_PRATIC/09_Elementals_Liquid.unity
+    guid: 48815177a13c2c941927c31455f90518
   - enabled: 1
     path: Assets/Scenes/Projet_PRATIC/10_Vide.unity
     guid: df4325ef85806484eace84ef7d5e89a5

@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Neuron
 {
     /// <summary>
-    /// This script streams a “reflected” version of the mocap-driven character.
+    /// This script streams a "reflected" version of the mocap-driven character.
     /// It expects that:
     /// 1. The source character is being updated by a NeuronTransformsInstance (or a similar script),
     ///    and that its bones can be accessed via GetTransforms().
@@ -12,9 +12,9 @@ namespace Neuron
     /// 3. A water plane exists at a specified Y (waterHeight) so that the reflection is calculated relative to it.
     /// 
     /// The reflection is computed by:
-    /// - Reflecting each bone’s world position across the horizontal plane:
+    /// - Reflecting each bone's world position across the horizontal plane:
     ///     reflectedPos.y = 2 * waterHeight - sourcePos.y
-    /// - Reflecting the bone’s rotation by inverting the vertical components of its forward/up vectors.
+    /// - Reflecting the bone's rotation by inverting the vertical components of its forward/up vectors.
     /// </summary>
     public class NeuronTransformsReflection : MonoBehaviour
     {
@@ -29,8 +29,44 @@ namespace Neuron
         [Tooltip("The Y coordinate of the water surface. The reflection is calculated relative to this level.")]
         public float waterHeight = 0.0f;
 
+        [Header("Mirror Trigger Settings")]
+        [Tooltip("The transform whose Y position is used as the mirror plane (e.g., a hand)")]
+        public Transform groundReference;
+        [Tooltip("The transform for the source artist's foot (for ground height)")]
+        public Transform footReference;
+        [Tooltip("Apparatus height in meters")] public float apparatusHeight = 0.8f;
+        [Tooltip("Key to trigger the mirror effect")]
+        public KeyCode mirrorKey = KeyCode.M;
+        [Tooltip("Use key activation (manual) or automatic pose detection")] public bool useKeyActivation = true;
+        [Tooltip("The GameObject to activate/deactivate for the mirror effect")]
+        public GameObject reflectionObject;
+        [Header("Arm Pose Detection")]
+        public Transform leftHand;
+        public Transform leftElbow;
+        public Transform leftShoulder;
+        public Transform rightHand;
+        public Transform rightElbow;
+        public Transform rightShoulder;
+        [Tooltip("How close to vertical (in degrees) the arm must be")] public float verticalThreshold = 15f;
+        [Tooltip("How still (in meters) the joints must be over the time window")] public float stillnessThreshold = 0.01f;
+        [Tooltip("Time window for stillness check (seconds)")] public float stillnessWindow = 0.2f;
+        [Tooltip("Tolerance for apparatus height check (meters)")]
+        public float heightTolerance = 0.15f;
+
         // Dictionary to map bone names to transforms in the reflection hierarchy.
         private Dictionary<string, Transform> reflectionBoneMap;
+
+        private bool isMirrored = false;
+        private float cachedMirrorY = 0f;
+        private float cachedGroundY = 0f;
+        private Queue<Vector3> leftHandHistory = new Queue<Vector3>();
+        private Queue<Vector3> leftElbowHistory = new Queue<Vector3>();
+        private Queue<Vector3> leftShoulderHistory = new Queue<Vector3>();
+        private Queue<Vector3> rightHandHistory = new Queue<Vector3>();
+        private Queue<Vector3> rightElbowHistory = new Queue<Vector3>();
+        private Queue<Vector3> rightShoulderHistory = new Queue<Vector3>();
+        private int historySteps;
+        private float lastHistoryTime = 0f;
 
         void Start()
         {
@@ -48,10 +84,113 @@ namespace Neuron
                 if (!reflectionBoneMap.ContainsKey(bone.name))
                     reflectionBoneMap.Add(bone.name, bone);
             }
+
+            if (footReference != null)
+                cachedGroundY = footReference.position.y;
+            else
+                cachedGroundY = 0f;
+            historySteps = Mathf.CeilToInt(stillnessWindow / Time.fixedDeltaTime);
+        }
+
+        void Update()
+        {
+            if (useKeyActivation)
+            {
+                // Check for mirror key press
+                if (Input.GetKeyDown(mirrorKey))
+                {
+                    isMirrored = !isMirrored;
+                    if (reflectionObject != null)
+                        reflectionObject.SetActive(isMirrored);
+                    if (isMirrored)
+                    {
+                        // Cache the ground height when activating
+                        cachedMirrorY = groundReference != null ? groundReference.position.y : waterHeight;
+                    }
+                }
+            }
+            else
+            {
+                // Automatic pose detection
+                bool leftStand = IsArmInStandPose(leftHand, leftElbow, leftShoulder, leftHandHistory, leftElbowHistory, leftShoulderHistory);
+                bool rightStand = IsArmInStandPose(rightHand, rightElbow, rightShoulder, rightHandHistory, rightElbowHistory, rightShoulderHistory);
+                bool shouldMirror = leftStand || rightStand;
+                if (shouldMirror != isMirrored)
+                {
+                    isMirrored = shouldMirror;
+                    if (reflectionObject != null)
+                        reflectionObject.SetActive(isMirrored);
+                    if (isMirrored)
+                    {
+                        // Cache the ground height when activating
+                        cachedMirrorY = groundReference != null ? groundReference.position.y : (cachedGroundY + apparatusHeight);
+                    }
+                }
+            }
+            // Update joint histories for stillness check
+            if (Time.time - lastHistoryTime > Time.fixedDeltaTime)
+            {
+                UpdateHistory(leftHand, leftHandHistory);
+                UpdateHistory(leftElbow, leftElbowHistory);
+                UpdateHistory(leftShoulder, leftShoulderHistory);
+                UpdateHistory(rightHand, rightHandHistory);
+                UpdateHistory(rightElbow, rightElbowHistory);
+                UpdateHistory(rightShoulder, rightShoulderHistory);
+                lastHistoryTime = Time.time;
+            }
+        }
+
+        private void UpdateHistory(Transform t, Queue<Vector3> history)
+        {
+            if (t == null) return;
+            history.Enqueue(t.position);
+            while (history.Count > historySteps)
+                history.Dequeue();
+        }
+
+        private bool IsArmInStandPose(Transform hand, Transform elbow, Transform shoulder, Queue<Vector3> handHist, Queue<Vector3> elbowHist, Queue<Vector3> shoulderHist)
+        {
+            if (hand == null || elbow == null || shoulder == null) return false;
+            // Check vertical alignment (Y order and XZ closeness)
+            Vector3 h = hand.position, e = elbow.position, s = shoulder.position;
+            // Hand below elbow below shoulder (for handstand)
+            bool yOrder = h.y < e.y && e.y < s.y;
+            // XZ closeness
+            float xzDist1 = Vector2.Distance(new Vector2(h.x, h.z), new Vector2(e.x, e.z));
+            float xzDist2 = Vector2.Distance(new Vector2(e.x, e.z), new Vector2(s.x, s.z));
+            bool xzClose = xzDist1 < 0.1f && xzDist2 < 0.1f;
+            // Verticality (angle between arm and world down)
+            Vector3 upper = (s - e).normalized;
+            Vector3 lower = (e - h).normalized;
+            float upperAngle = Vector3.Angle(upper, Vector3.down);
+            float lowerAngle = Vector3.Angle(lower, Vector3.down);
+            bool vertical = upperAngle < verticalThreshold && lowerAngle < verticalThreshold;
+            // Height: must be within apparatusHeight ± tolerance
+            float apparatusY = cachedGroundY + apparatusHeight;
+            bool onApparatus = Mathf.Abs(h.y - apparatusY) < heightTolerance;
+            // Stillness
+            bool still = IsStill(handHist) && IsStill(elbowHist) && IsStill(shoulderHist);
+            bool result = yOrder && xzClose && vertical && onApparatus && still;
+            Debug.Log($"[NeuronTransformsReflection] HandY: {h.y:F3}, ApparatusY: {apparatusY:F3}, GroundY: {cachedGroundY:F3}, yOrder: {yOrder}, xzClose: {xzClose}, vertical: {vertical}, onApparatus: {onApparatus}, still: {still}, result: {result}");
+            return result;
+        }
+
+        private bool IsStill(Queue<Vector3> history)
+        {
+            if (history.Count < 2) return false;
+            Vector3 min = history.Peek(), max = history.Peek();
+            foreach (var v in history)
+            {
+                min = Vector3.Min(min, v);
+                max = Vector3.Max(max, v);
+            }
+            return (max - min).magnitude < stillnessThreshold;
         }
 
         void LateUpdate()
         {
+            if (!isMirrored)
+                return;
             // Ensure the source character and its transforms are available.
             if (sourceCharacter == null || reflectionBoneMap == null)
                 return;
@@ -61,6 +200,9 @@ namespace Neuron
 
             if (sourceBones == null)
                 return;
+
+            // Use the cached ground height as the mirror plane
+            float mirrorY = cachedMirrorY;
 
             // For every source bone, update the corresponding reflection bone.
             foreach (Transform srcBone in sourceBones)
@@ -72,9 +214,9 @@ namespace Neuron
                 if (reflectionBoneMap.TryGetValue(srcBone.name, out Transform reflBone))
                 {
                     // --- Reflect Position ---
-                    // Mirror the source world position relative to waterHeight.
+                    // Mirror the source world position relative to mirrorY.
                     Vector3 srcWorldPos = srcBone.position;
-                    Vector3 reflWorldPos = new Vector3(srcWorldPos.x, 2 * waterHeight - srcWorldPos.y, srcWorldPos.z);
+                    Vector3 reflWorldPos = new Vector3(srcWorldPos.x, 2 * mirrorY - srcWorldPos.y, srcWorldPos.z);
                     reflBone.position = reflWorldPos;
 
                     // --- Reflect Rotation ---

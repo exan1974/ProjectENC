@@ -49,8 +49,8 @@ public class FrontFacingCamera : MonoBehaviour
             isLockedOn = !isLockedOn;
             isTransitioning = true;
             transitionProgress = 0f;
-            if (isLockedOn)
-            {
+        if (isLockedOn)
+        {
                 // Calculate lock-on parameters
                 Vector3 targetPos = target.position;
                 Vector3 camToTarget = transform.position - targetPos;
