@@ -34,6 +34,8 @@ namespace Neuron
         public Transform groundReference;
         [Tooltip("The transform for the source artist's foot (for ground height)")]
         public Transform footReference;
+        [Tooltip("Right hand transform for mirror plane calculation")]
+        public Transform rightHandReference;
         [Tooltip("Apparatus height in meters")] public float apparatusHeight = 0.8f;
         [Tooltip("Key to trigger the mirror effect")]
         public KeyCode mirrorKey = KeyCode.M;
@@ -104,8 +106,14 @@ namespace Neuron
                         reflectionObject.SetActive(isMirrored);
                     if (isMirrored)
                     {
-                        // Cache the ground height when activating
-                        cachedMirrorY = groundReference != null ? groundReference.position.y : waterHeight;
+                        // Cache the ground height when activating - use lowest Y from both hands
+                        float leftHandY = groundReference != null ? groundReference.position.y : float.MaxValue;
+                        float rightHandY = rightHandReference != null ? rightHandReference.position.y : float.MaxValue;
+                        cachedMirrorY = Mathf.Min(leftHandY, rightHandY);
+                        
+                        // Fallback to waterHeight if no hands are available
+                        if (cachedMirrorY == float.MaxValue)
+                            cachedMirrorY = waterHeight;
                     }
                 }
             }
@@ -122,8 +130,14 @@ namespace Neuron
                         reflectionObject.SetActive(isMirrored);
                     if (isMirrored)
                     {
-                        // Cache the ground height when activating
-                        cachedMirrorY = groundReference != null ? groundReference.position.y : (cachedGroundY + apparatusHeight);
+                        // Cache the ground height when activating - use lowest Y from both hands
+                        float leftHandY = groundReference != null ? groundReference.position.y : float.MaxValue;
+                        float rightHandY = rightHandReference != null ? rightHandReference.position.y : float.MaxValue;
+                        cachedMirrorY = Mathf.Min(leftHandY, rightHandY);
+                        
+                        // Fallback to calculated apparatus height if no hands are available
+                        if (cachedMirrorY == float.MaxValue)
+                            cachedMirrorY = cachedGroundY + apparatusHeight;
                     }
                 }
             }

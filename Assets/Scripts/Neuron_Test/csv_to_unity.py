@@ -7,8 +7,8 @@ import struct
 # SETTINGS ===================================================================================
 # Path to your CSV file (update as needed)
 # fncsv = "G:\\BdeB\\Stage\\ProjectENC\\Assets\\Scripts\\Neuron_Test\\Data\\Equilibre main\\EquilibreMain_002.csv"
-# fncsv = "G:\\BdeB\\Stage\\ProjectENC\\Assets\\Scripts\\Neuron_Test\\Data\\EquilibreMain_001.csv"
-fncsv = "G:\\BdeB\\Stage\\ProjectENC\\Assets\\Scripts\\Neuron_Test\\Data\\Acro\\Sequence_acro_001.csv"
+fncsv = "G:\\BdeB\\Stage\\ProjectENC\\Assets\\Scripts\\Neuron_Test\\Data\\EquilibreMain_001.csv"
+# fncsv = "G:\\BdeB\\Stage\\ProjectENC\\Assets\\Scripts\\Neuron_Test\\Data\\Acro\\Sequence_acro_001.csv"
 # Destination IP address and UDP port for streaming
 UDP_IP = "127.0.0.1"
 UDP_PORT = 7000

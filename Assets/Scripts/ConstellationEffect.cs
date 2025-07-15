@@ -2,6 +2,13 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum ConstellationTriggerMode
+{
+    Key,
+    Timer,
+    Pose
+}
+
 public class ConstellationEffect : MonoBehaviour
 {
     [Header("Prefabs & Skeleton")]
@@ -20,36 +27,139 @@ public class ConstellationEffect : MonoBehaviour
     [Tooltip("Seconds to stay fully visible at center")]
     public float displayDuration = 2f;
 
-    [Header("Controls")]
+    [Header("Trigger Settings")]
+    [Tooltip("How the constellation effect is triggered")]
+    public ConstellationTriggerMode triggerMode = ConstellationTriggerMode.Key;
     [Tooltip("Key to trigger the constellation effect")]
     public KeyCode triggerKey = KeyCode.Space;
-    [Tooltip("Use timer instead of key press")]
-    public bool useTimer = false;
     [Tooltip("Time interval between automatic captures (in seconds)")]
     public float captureInterval = 3f;
+    [Tooltip("How long to stay in the same pose to trigger (in seconds)")]
+    public float poseHoldDuration = 2f;
+
+    [Header("Pose Detection")]
+    [Tooltip("Transform of the right hand (for pose detection)")]
+    public Transform rightHand;
+    [Tooltip("Transform of the left hand (for pose detection)")]
+    public Transform leftHand;
+    [Tooltip("Transform of the right shoulder (for pose detection)")]
+    public Transform rightShoulder;
+    [Tooltip("Transform of the left shoulder (for pose detection)")]
+    public Transform leftShoulder;
+    [Tooltip("Transform of the right foot (for pose detection)")]
+    public Transform rightFoot;
+    [Tooltip("Transform of the left foot (for pose detection)")]
+    public Transform leftFoot;
+    [Tooltip("How close positions must be to be considered the same pose (in meters)")]
+    public float poseThreshold = 0.1f;
+
     private float m_timeUntilNextCapture;
+    private float m_poseHoldTime = 0f;
+    private Vector3 m_lastRightHandPos;
+    private Vector3 m_lastLeftHandPos;
+    private Vector3 m_lastRightShoulderPos;
+    private Vector3 m_lastLeftShoulderPos;
+    private Vector3 m_lastRightFootPos;
+    private Vector3 m_lastLeftFootPos;
+    private bool m_isInPose = false;
 
     int currentStoreIndex = 0;
 
     void Start()
     {
         m_timeUntilNextCapture = captureInterval;
+        
+        // Initialize pose detection
+        if (triggerMode == ConstellationTriggerMode.Pose)
+        {
+            InitializePoseDetection();
+        }
     }
 
     void Update()
     {
-        if (useTimer)
+        switch (triggerMode)
         {
-            m_timeUntilNextCapture -= Time.deltaTime;
-            if (m_timeUntilNextCapture <= 0)
-            {
-                CapturePose();
-                m_timeUntilNextCapture = captureInterval;
-            }
+            case ConstellationTriggerMode.Key:
+                if (Input.GetKeyDown(triggerKey))
+                {
+                    CapturePose();
+                }
+                break;
+
+            case ConstellationTriggerMode.Timer:
+                m_timeUntilNextCapture -= Time.deltaTime;
+                if (m_timeUntilNextCapture <= 0)
+                {
+                    CapturePose();
+                    m_timeUntilNextCapture = captureInterval;
+                }
+                break;
+
+            case ConstellationTriggerMode.Pose:
+                UpdatePoseDetection();
+                break;
         }
-        else if (Input.GetKeyDown(triggerKey))
+    }
+
+    private void InitializePoseDetection()
+    {
+        if (rightHand != null) m_lastRightHandPos = rightHand.position;
+        if (leftHand != null) m_lastLeftHandPos = leftHand.position;
+        if (rightShoulder != null) m_lastRightShoulderPos = rightShoulder.position;
+        if (leftShoulder != null) m_lastLeftShoulderPos = leftShoulder.position;
+        if (rightFoot != null) m_lastRightFootPos = rightFoot.position;
+        if (leftFoot != null) m_lastLeftFootPos = leftFoot.position;
+    }
+
+    private void UpdatePoseDetection()
+    {
+        if (rightHand == null || leftHand == null || rightShoulder == null || leftShoulder == null ||
+            rightFoot == null || leftFoot == null)
         {
-            CapturePose();
+            Debug.LogWarning("Pose detection transforms not assigned! All hands, shoulders, and feet are required.");
+            return;
+        }
+
+        // Check if current pose is similar to last pose
+        bool poseChanged = false;
+        
+        if (Vector3.Distance(rightHand.position, m_lastRightHandPos) > poseThreshold ||
+            Vector3.Distance(leftHand.position, m_lastLeftHandPos) > poseThreshold ||
+            Vector3.Distance(rightShoulder.position, m_lastRightShoulderPos) > poseThreshold ||
+            Vector3.Distance(leftShoulder.position, m_lastLeftShoulderPos) > poseThreshold ||
+            Vector3.Distance(rightFoot.position, m_lastRightFootPos) > poseThreshold ||
+            Vector3.Distance(leftFoot.position, m_lastLeftFootPos) > poseThreshold)
+        {
+            poseChanged = true;
+        }
+
+        if (poseChanged)
+        {
+            // Pose changed, reset timer
+            m_poseHoldTime = 0f;
+            m_isInPose = false;
+            
+            // Update last positions
+            m_lastRightHandPos = rightHand.position;
+            m_lastLeftHandPos = leftHand.position;
+            m_lastRightShoulderPos = rightShoulder.position;
+            m_lastLeftShoulderPos = leftShoulder.position;
+            m_lastRightFootPos = rightFoot.position;
+            m_lastLeftFootPos = leftFoot.position;
+        }
+        else
+        {
+            // Pose maintained, increment timer
+            m_poseHoldTime += Time.deltaTime;
+            
+            if (!m_isInPose && m_poseHoldTime >= poseHoldDuration)
+            {
+                // Pose held long enough, trigger constellation
+                m_isInPose = true;
+                CapturePose();
+                m_poseHoldTime = 0f; // Reset for next trigger
+            }
         }
     }
 

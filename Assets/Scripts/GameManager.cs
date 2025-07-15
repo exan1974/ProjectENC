@@ -7,10 +7,11 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameObject toggleScreen;
 
     private bool isVisible = false;
+    public bool isTitleScreen = false;
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (Input.GetKeyDown(KeyCode.Escape) && !isTitleScreen)
         {
             ToggleScreen();
         }
@@ -26,8 +27,8 @@ public class GameManager : MonoBehaviour
         else if (Input.GetKeyDown(KeyCode.Alpha8)) LoadScene(8);
         else if (Input.GetKeyDown(KeyCode.Alpha9)) LoadScene(9);
         else if (Input.GetKeyDown(KeyCode.Alpha0)) LoadScene(10);
-        else if (Input.GetKeyDown(KeyCode.Minus)) LoadScene(11);
-        else if (Input.GetKeyDown(KeyCode.Equals)) LoadScene(12);
+        // else if (Input.GetKeyDown(KeyCode.Minus)) LoadScene(11);
+        // else if (Input.GetKeyDown(KeyCode.Equals)) LoadScene(12);
     }
 
     private void LoadScene(int sceneIndex)
